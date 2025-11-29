@@ -1,0 +1,38 @@
+[
+  {
+    "createBy": "admin",
+    "createTime": "2025-11-01 09:00:00",
+    "noticeContent": "系统维护通知，届时可能短暂不可用。",
+    "noticeId": 1,
+    "noticeTitle": "系统维护",
+    "noticeType": "1",
+    "remark": "",
+    "status": "0",
+    "updateBy": "ops",
+    "updateTime": "2025-11-02 10:00:00"
+  },
+  {
+    "createBy": "admin",
+    "createTime": "2025-11-10 08:30:00",
+    "noticeContent": "新功能上线：报表导出。",
+    "noticeId": 2,
+    "noticeTitle": "功能上线",
+    "noticeType": "2",
+    "remark": "",
+    "status": "0",
+    "updateBy": "pm",
+    "updateTime": "2025-11-10 12:00:00"
+  },
+  {
+    "createBy": "system",
+    "createTime": "2025-11-20 18:00:00",
+    "noticeContent": "例行安全更新。",
+    "noticeId": 3,
+    "noticeTitle": "安全更新",
+    "noticeType": "1",
+    "remark": "",
+    "status": "1",
+    "updateBy": "security",
+    "updateTime": "2025-11-21 09:00:00"
+  }
+]
