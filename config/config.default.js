@@ -23,11 +23,11 @@ module.exports = appInfo => {
 
   config.sequelize = {
     dialect: 'postgres',
-    host: process.env.PG_HOST || '127.0.0.1',
+    host: process.env.PG_HOST || '120.48.95.51',
     port: Number(process.env.PG_PORT || 5432),
     database: process.env.PG_DATABASE || 'egg_example',
     username: process.env.PG_USERNAME || process.env.USER || 'xiaqingpeng',
-    password: process.env.PG_PASSWORD || '',
+    password: process.env.PG_PASSWORD || '1994514Xia@',
     timezone: '+08:00',
     quoteIdentifiers: false,
     define: {
