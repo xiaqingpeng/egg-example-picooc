@@ -30,35 +30,35 @@ module.exports = appInfo => {
   };
 
   config.sequelize = {
-  dialect: 'postgres',
+    dialect: 'postgres',
   host: process.env.PG_HOST || '120.48.95.51',
-  port: Number(process.env.PG_PORT || 5432),
-  database: process.env.PG_DATABASE || 'egg_example',
+    port: Number(process.env.PG_PORT || 5432),
+    database: process.env.PG_DATABASE || 'egg_example',
   username: process.env.PG_USERNAME || 'egg_example', // 改为 egg_example 用户
-  password: process.env.PG_PASSWORD || '1994514Xia@',
-  timezone: '+08:00',
-  quoteIdentifiers: false,
-  define: {
-    freezeTableName: true,
-    underscored: false,
+    password: process.env.PG_PASSWORD || '1994514Xia@',
+    timezone: '+08:00',
     quoteIdentifiers: false,
-  },
-  pool: {
-    max: 5,
-    min: 0,
-    acquire: 30000,
-    idle: 10000,
-  },
-  enableSync: true,
-};
+    define: {
+      freezeTableName: true,
+      underscored: false,
+      quoteIdentifiers: false,
+    },
+    pool: {
+      max: 5,
+      min: 0,
+      acquire: 30000,
+      idle: 10000,
+    },
+    enableSync: true,
+  };
 
   config.security = {
-  csrf: {
-    enable: true,
-    ignoreJSON: false, // 关闭不安全配置，消除警告
-    ignore: [ '/system/logs/report', '/register', '/login' ] // 保留业务白名单
-  }
-};
+    csrf: {
+      enable: true,
+      ignoreJSON: false, // 关闭不安全配置，消除警告
+      ignore: [ '/system/logs/report', '/register', '/login', '/user/register' ] // 保留业务白名单
+    }
+  };
 
   return {
     ...config,
