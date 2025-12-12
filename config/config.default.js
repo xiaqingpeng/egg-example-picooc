@@ -31,17 +31,18 @@ module.exports = appInfo => {
 
   config.sequelize = {
     dialect: 'postgres',
-  host: process.env.PG_HOST || '120.48.95.51',
+    host: process.env.PG_HOST || '120.48.95.51',
     port: Number(process.env.PG_PORT || 5432),
     database: process.env.PG_DATABASE || 'egg_example',
-  username: process.env.PG_USERNAME || 'egg_example', // 改为 egg_example 用户
+    username: process.env.PG_USERNAME || 'egg_example',
     password: process.env.PG_PASSWORD || '1994514Xia@',
     timezone: '+08:00',
-    quoteIdentifiers: false,
+    quoteIdentifiers: true,
+    logging: console.log,
     define: {
       freezeTableName: true,
       underscored: false,
-      quoteIdentifiers: false,
+      quoteIdentifiers: true,
     },
     pool: {
       max: 5,

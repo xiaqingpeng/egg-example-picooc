@@ -4,13 +4,13 @@ module.exports = app => {
   const { STRING, INTEGER, DATE } = app.Sequelize;
 
   const User = app.model.define('user', {
-    id: { type: INTEGER, primaryKey: true, autoIncrement: true },
-    username: { type: STRING(64), allowNull: false },
-    email: { type: STRING(128), allowNull: false, unique: true },
-    password: { type: STRING(128), allowNull: false },
+    id: { type: INTEGER, primaryKey: true, autoIncrement: true, field: 'id' },
+    username: { type: STRING(64), allowNull: false, field: 'username' },
+    email: { type: STRING(128), allowNull: false, unique: true, field: 'email' },
+    password: { type: STRING(128), allowNull: false, field: 'password' },
     createTime: { type: DATE, field: 'createtime' },
     updateTime: { type: DATE, field: 'updatetime' },
-  }, {
+  },{
     tableName: 'system_user',
     timestamps: true,
     createdAt: 'createTime',
