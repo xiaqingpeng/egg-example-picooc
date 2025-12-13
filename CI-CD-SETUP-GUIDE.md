@@ -1,24 +1,24 @@
-# CI/CD 配置详细指南
+# CI/CD 配置详细指南 (Gitee 版本)
 
-## 步骤1：设置 GitHub Secrets
+## 步骤1：设置 Gitee 密钥
 
 ### 概述
-GitHub Secrets 用于安全存储服务器连接信息，避免将敏感信息硬编码到 CI/CD 配置文件中。
+Gitee 密钥用于安全存储服务器连接信息，避免将敏感信息硬编码到 CI/CD 配置文件中。
 
 ### 操作步骤
 
-1. **登录 GitHub 并进入仓库**
-   - 打开浏览器，访问 GitHub 并登录
-   - 进入项目仓库：`https://github.com/your-username/egg-example-picooc`
+1. **登录 Gitee 并进入仓库**
+   - 打开浏览器，访问 Gitee 并登录
+   - 进入项目仓库：`https://gitee.com/your-username/egg-example-picooc`
 
-2. **进入 Secrets 设置**
-   - 点击仓库顶部导航栏的 `Settings`（设置）
-   - 在左侧菜单中，点击 `Secrets and variables`（密钥和变量）
-   - 选择 `Actions` 选项卡
+2. **进入密钥设置**
+   - 点击仓库顶部导航栏的 `管理`
+   - 在左侧菜单中，点击 `流水线`
+   - 选择 `密钥管理` 选项卡
 
-3. **添加服务器连接 Secrets**
-   - 点击 `New repository secret`（新仓库密钥）按钮
-   - 依次添加以下三个 Secrets：
+3. **添加服务器连接密钥**
+   - 点击 `添加密钥` 按钮
+   - 依次添加以下三个密钥：
 
      | 密钥名称 | 值 | 说明 |
      |---------|-----|------|
@@ -26,10 +26,10 @@ GitHub Secrets 用于安全存储服务器连接信息，避免将敏感信息�
      | `SERVER_USERNAME` | `root` | 服务器用户名 |
      | `SERVER_PASSWORD` | 您的服务器密码 | 服务器登录密码 |
 
-   - 每个 Secret 添加完成后，点击 `Add secret` 按钮
+   - 每个密钥添加完成后，点击 `保存` 按钮
 
-4. **验证 Secrets**
-   - 添加完成后，您应该在 Secrets 列表中看到这三个条目
+4. **验证密钥**
+   - 添加完成后，您应该在密钥列表中看到这三个条目
    - 密钥值将被隐藏，仅在 CI/CD 流程执行时可见
 
 ## 步骤2：确保 PM2 已配置
@@ -126,6 +126,18 @@ ssh root@120.48.95.51 'ls -la /www/wwwroot/egg-example-picooc/'
    ufw enable
    ```
 
+## 步骤4：启用 Gitee Actions
+
+### 操作步骤
+
+1. **进入流水线设置**
+   - 在 Gitee 仓库页面，点击 `流水线` 标签
+   - 点击 `启用流水线` 按钮
+
+2. **验证流水线**
+   - 代码推送后，流水线会自动触发
+   - 点击流水线名称查看构建日志和状态
+
 ## 测试 CI/CD 流程
 
 ### 触发构建
@@ -138,7 +150,7 @@ ssh root@120.48.95.51 'ls -la /www/wwwroot/egg-example-picooc/'
    ```
 
 2. **查看构建状态**
-   - 在 GitHub 仓库中，点击 `Actions` 标签
+   - 在 Gitee 仓库中，点击 `流水线` 标签
    - 查看最新的构建日志和状态
 
 ### 验证部署
@@ -170,9 +182,9 @@ npm install
 ### 部署失败：SSH 连接错误
 
 **检查项**：
-- 确认 `SERVER_HOST`、`SERVER_USERNAME`、`SERVER_PASSWORD` Secrets 配置正确
+- 确认 `SERVER_HOST`、`SERVER_USERNAME`、`SERVER_PASSWORD` 密钥配置正确
 - 确认服务器 SSH 端口（默认 22）已开放
-- 确认服务器防火墙允许 GitHub Actions IP 连接
+- 确认服务器防火墙允许 Gitee IP 连接
 
 ### 应用启动失败
 
@@ -202,8 +214,9 @@ ssh root@120.48.95.51 'pm2 logs example-picooc'
 
 ## 总结
 
-✅ **步骤1**：GitHub Secrets 已配置（需手动添加）
+✅ **步骤1**：Gitee 密钥已配置（需手动添加）
 ✅ **步骤2**：PM2 已安装并配置完成
 ✅ **步骤3**：服务器环境已满足所有要求
+✅ **步骤4**：Gitee Actions 已启用
 
-CI/CD 流程已完全配置，只需添加 GitHub Secrets 即可开始使用。
+CI/CD 配置已完成，只需添加 Gitee 密钥即可开始使用。

@@ -1,126 +1,135 @@
-# CI/CD 集成方案
+# CI/CD 集成说明 (Gitee 版本)
 
-本项目已集成 GitHub Actions CI/CD 流水线，支持代码检查、自动化测试和自动部署功能。
+## 概述
 
-## 流程概述
+本项目已集成 Gitee Actions 实现 CI/CD 自动化流程，包括代码检查、测试和自动部署功能。
 
-### 持续集成 (CI)
-- 代码推送到 `main`/`master` 分支或提交 Pull Request 时触发
-- 执行步骤：
-  1. 安装依赖
-  2. ESLint 代码检查
-  3. 运行单元测试
+## CI/CD 配置文件
 
-### 持续部署 (CD)
-- 只有当代码推送到 `main`/`master` 分支且所有测试通过时触发
-- 执行步骤：
-  1. SSH 连接到服务器
-  2. 拉取最新代码
-  3. 安装生产依赖
-  4. 使用 PM2 重启应用
+配置文件路径：`.gitee/workflows/cicd.yml`
 
-## 配置步骤
+## 功能特性
 
-### 1. 设置 GitHub Secrets
+1. **代码质量检查**：使用 ESLint 进行代码风格检查
+2. **自动化测试**：自动运行单元测试确保功能正常
+3. **自动部署**：代码推送到主分支后自动部署到生产服务器
+4. **状态反馈**：在 Gitee 仓库页面展示构建和部署状态
 
-需要在 GitHub 仓库的 `Settings` -> `Secrets and variables` -> `Actions` 中添加以下环境变量：
+## 工作流说明
 
-| 变量名 | 说明 | 示例值 |
-|-------|------|-------|
-| SERVER_HOST | 服务器 IP 地址 | 120.48.95.51 |
-| SERVER_USERNAME | 服务器用户名 | root |
-| SERVER_PASSWORD | 服务器密码 | your_password |
+### 触发条件
 
-### 2. 配置 PM2
+- 代码推送到 `main` 或 `master` 分支时自动触发
+- 提交 Pull Request 到 `main` 或 `master` 分支时自动触发
 
-确保服务器上已安装 PM2 并配置好 `ecosystem.config.js` 文件：
+### 工作流步骤
+
+#### 1. 构建和测试 (build-test)
+
+1. **检出代码**：从 Gitee 仓库检出最新代码
+2. **设置 Node.js 环境**：使用 Node.js 18.x 版本
+3. **安装依赖**：使用 npm install 安装项目依赖
+4. **代码检查**：运行 npm run lint 检查代码质量
+5. **运行测试**：运行 npm run test:local 执行单元测试
+
+#### 2. 部署 (deploy)
+
+- **依赖条件**：只有当 build-test 任务成功完成时才会执行
+- **触发条件**：只有在代码推送到主分支时才会执行
+
+1. **检出代码**：从 Gitee 仓库检出最新代码
+2. **自动部署**：通过 SSH 连接到服务器并执行部署脚本
+   - 进入项目目录
+   - 拉取最新代码
+   - 安装生产依赖
+   - 重启应用服务
+
+## 配置说明
+
+### 服务器连接配置
+
+在 Gitee 仓库中设置以下密钥：
+
+- `SERVER_HOST`: 服务器 IP 地址
+- `SERVER_USERNAME`: 服务器用户名
+- `SERVER_PASSWORD`: 服务器密码
+
+### 自定义部署脚本
+
+部署脚本位于 `.gitee/workflows/cicd.yml` 文件的 deploy 部分，可以根据需要修改：
+
+```yaml
+script: |
+  # 进入项目目录
+  cd /www/wwwroot/egg-example-picooc
+  
+  # 拉取最新代码
+  git pull origin main
+  
+  # 安装依赖
+  npm install --production
+  
+  # 重启应用
+  pm2 restart ecosystem.config.js
+  
+  # 显示状态
+  pm2 status
+```
+
+## 使用方法
+
+### 1. 推送代码触发 CI/CD
 
 ```bash
-# 安装 PM2
-npm install pm2 -g
-
-# 启动应用
-pm2 start ecosystem.config.js
+git add .
+git commit -m "feat: 添加新功能"
+git push origin main
 ```
 
-### 3. 服务器环境配置
+### 2. 查看 CI/CD 状态
 
-确保服务器上已安装：
-- Node.js >= 18.0.0
-- Git
-- PostgreSQL
+1. 登录 Gitee，进入项目仓库
+2. 点击 `流水线` 标签
+3. 查看最新的构建和部署状态
+4. 点击流水线名称查看详细日志
 
-### 4. 数据库配置
+## 测试说明
 
-确保数据库连接配置在 `config/config.default.js` 中正确设置：
+项目已配置单元测试，位于 `test` 目录下。测试框架使用 Egg.js 内置的测试工具。
 
-```javascript
-config.sequelize = {
-  dialect: 'postgres',
-  host: 'your_host',
-  port: 5432,
-  database: 'egg_example',
-  username: 'your_username',
-  password: 'your_password',
-  // ... 其他配置
-};
+### 运行测试命令
+
+```bash
+# 本地运行测试
+npm run test:local
+
+# 运行特定测试文件
+npm run test:local -- --grep="notice"
 ```
 
-## 使用说明
+## 常见问题
 
-### 触发 CI/CD 流程
+### 构建失败
 
-- 推送代码到 `main`/`master` 分支：自动触发完整的 CI/CD 流程
-- 创建 Pull Request 到 `main`/`master` 分支：仅触发 CI 流程（代码检查和测试）
+- **依赖安装失败**：检查网络连接和 package.json 配置
+- **代码检查失败**：根据 ESLint 提示修复代码风格问题
+- **测试失败**：根据测试报告修复功能问题
 
-### 查看构建状态
+### 部署失败
 
-在 GitHub 仓库的 `Actions` 标签页中可以查看 CI/CD 流程的执行状态和详细日志。
+- **服务器连接问题**：检查 SERVER_HOST、SERVER_USERNAME、SERVER_PASSWORD 配置
+- **项目目录问题**：确保服务器上存在 /www/wwwroot/egg-example-picooc 目录
+- **权限问题**：确保服务器用户有足够权限执行部署命令
 
-### 常见问题
+## 扩展建议
 
-1. **部署失败：SSH 连接错误**
-   - 检查 GitHub Secrets 中的服务器信息是否正确
-   - 确保服务器已开放 SSH 端口（默认 22）
+1. **添加更多测试**：增加集成测试和端到端测试
+2. **环境分离**：为开发、测试和生产环境配置不同的部署流程
+3. **版本管理**：添加自动版本号生成和发布功能
+4. **监控集成**：添加应用性能监控和告警功能
 
-2. **测试失败**
-   - 检查测试代码是否正确
-   - 确保依赖已正确安装
+## 总结
 
-3. **应用启动失败**
-   - 检查 PM2 日志：`pm2 logs example-picooc`
-   - 确保数据库连接正常
-   - 检查端口是否被占用
+Gitee CI/CD 已成功集成到项目中，通过自动化流程提高开发效率和代码质量。
 
-4. **权限错误**
-   - 确保服务器用户有足够的权限访问项目目录
-   - 检查文件系统权限设置
-
-## 扩展功能
-
-### 添加更多测试
-
-在 `test/app/controller/` 目录下添加更多测试文件，CI 流程会自动执行所有测试。
-
-### 部署到多个环境
-
-可以扩展 `cicd.yml` 文件，添加不同环境的部署配置（如 staging、production）。
-
-### 添加代码质量检查
-
-可以集成 SonarQube 等代码质量检查工具到 CI 流程中。
-
-### 自动备份
-
-在部署前添加数据库备份步骤，确保数据安全。
-
-## 文件说明
-
-- `.github/workflows/cicd.yml`: GitHub Actions 工作流配置文件
-- `ecosystem.config.js`: PM2 进程管理配置文件
-- `test/`: 测试代码目录
-- `config/config.default.js`: 应用配置文件
-
----
-
-如有任何问题，请查看 GitHub Actions 日志或联系项目维护者。
+如需修改配置，请编辑 `.gitee/workflows/cicd.yml` 文件。
