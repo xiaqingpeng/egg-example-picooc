@@ -23,7 +23,7 @@
     "node": ">=18.0.0"
   },
   "scripts": {
-    "start": "egg-scripts start --daemon --title=egg-server-example-picooc",
+    "start": "egg-scripts start --title=egg-server-example-picooc --host=0.0.0.0",
     "stop": "egg-scripts stop --title=egg-server-example-picooc",
     "dev": "egg-bin dev",
     "test": "npm run lint -- --fix && npm run test:local",
