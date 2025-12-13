@@ -39,7 +39,7 @@ class UserController extends Controller {
     }
 
     const user = await ctx.service.user.verifyUser(email, password);
-    
+
     if (user) {
       ctx.session.user = user;
       console.log({ code: 0, msg: 'Login success', data: user });

@@ -11,11 +11,11 @@ module.exports = {
       max_memory_restart: '1G',
       cwd: '/www/wwwroot/egg-example-picooc/',
       env: {
-        NODE_ENV: 'production'
+        NODE_ENV: 'production',
       },
       env_dev: {
-        NODE_ENV: 'development'
-      }
-    }
-  ]
+        NODE_ENV: 'development',
+      },
+    },
+  ],
 };

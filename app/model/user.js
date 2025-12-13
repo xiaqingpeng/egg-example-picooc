@@ -10,7 +10,7 @@ module.exports = app => {
     password: { type: STRING(128), allowNull: false, field: 'password' },
     createTime: { type: DATE, field: 'createtime' },
     updateTime: { type: DATE, field: 'updatetime' },
-  },{
+  }, {
     tableName: 'system_user',
     timestamps: true,
     createdAt: 'createTime',

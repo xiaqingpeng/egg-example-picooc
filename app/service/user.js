@@ -22,8 +22,10 @@ class UserService extends Service {
       email,
       password: hashedPassword,
     });
-    
-    const { password: _, ...userInfo } = user.toJSON();
+
+    // 从用户数据中排除password字段
+    const userInfo = { ...user.toJSON() };
+    delete userInfo.password;
     return userInfo;
   }
 
@@ -34,7 +36,9 @@ class UserService extends Service {
 
     const hashedPassword = this.hashPassword(password);
     if (user.password === hashedPassword) {
-      const { password: _, ...userInfo } = user.toJSON();
+      // 从用户数据中排除password字段
+      const userInfo = { ...user.toJSON() };
+      delete userInfo.password;
       return userInfo;
     }
     return null;

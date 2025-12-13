@@ -1,4 +1,5 @@
-module.exports = (options, app) => {
+// 中间件函数，无需使用options和app参数
+module.exports = () => {
   return async (ctx, next) => {
     const skipPaths = new Set([ '/system/logs/stats', '/system/logs/report' ]);
     const start = Date.now();

@@ -20,13 +20,13 @@ module.exports = appInfo => {
   const userConfig = {
     // myAppName: 'egg',
   };
-  
+
   // 新增：配置监听所有网卡，允许外网访问
   config.cluster = {
     listen: {
       port: 7001,
-      hostname: '0.0.0.0' // 关键：监听所有网卡，而非仅本地回环
-    }
+      hostname: '0.0.0.0', // 关键：监听所有网卡，而非仅本地回环
+    },
   };
 
   config.sequelize = {
@@ -57,8 +57,8 @@ module.exports = appInfo => {
     csrf: {
       enable: true,
       ignoreJSON: false, // 关闭不安全配置，消除警告
-      ignore: [ '/system/logs/report', '/register', '/login', '/user/register' ] // 保留业务白名单
-    }
+      ignore: [ '/system/logs/report', '/register', '/login', '/user/register' ], // 保留业务白名单
+    },
   };
 
   return {
