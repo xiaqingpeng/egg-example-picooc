@@ -44,6 +44,9 @@ jobs:
         password: ${{ secrets.SERVER_PASSWORD }}
         port: 22
         script: |
+          # 设置Node.js环境变量
+          export PATH=/www/server/nodejs/v24.12.0/bin:$PATH
+          
           # 进入项目目录
           cd /www/wwwroot/egg-example-picooc
           
@@ -58,3 +61,7 @@ jobs:
           
           # 显示状态
           pm2 status
+          
+          # 验证Node.js版本
+          echo "Node.js版本:" && node -v
+          echo "npm版本:" && npm -v
