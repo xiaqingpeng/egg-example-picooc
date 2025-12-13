@@ -13,7 +13,7 @@ class HomeController extends Controller {
       code: 0,
       msg: 'CI/CD自动部署测试成功',
       timestamp: new Date().toISOString(),
-      version: '1.0.0'
+      version: '1.0.0',
     };
   }
 }
