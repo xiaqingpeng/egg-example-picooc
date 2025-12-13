@@ -49,6 +49,17 @@ class UserController extends Controller {
       ctx.body = { code: 401, msg: 'Invalid email or password' };
     }
   }
+
+  async getUserInfo() {
+    const { ctx } = this;
+    // 检查用户是否已登录
+    if (ctx.session.user) {
+      ctx.body = { code: 0, msg: 'Success', data: ctx.session.user };
+    } else {
+      ctx.status = 401;
+      ctx.body = { code: 401, msg: 'Not logged in' };
+    }
+  }
 }
 
 module.exports = UserController;

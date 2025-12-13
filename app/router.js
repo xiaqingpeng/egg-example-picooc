@@ -14,4 +14,6 @@ module.exports = app => {
   router.post('/system/logs/report', controller.system.logs.report);
   router.post('/register', controller.user.register);
   router.post('/login', controller.user.login);
+  // 添加获取用户信息的接口
+  router.get('/user/info', controller.user.getUserInfo);
 };
