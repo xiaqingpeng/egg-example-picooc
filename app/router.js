@@ -16,6 +16,8 @@ module.exports = app => {
   router.post('/login', controller.user.login);
   // 添加获取用户信息的接口
   router.get('/user/info', controller.user.getUserInfo);
+  // 添加根据用户ID查询用户信息的接口（无需登录验证）
+  router.get('/user/:id', controller.user.getUserById);
   // 添加测试路由，用于验证CI/CD自动部署功能
   router.get('/test-cicd', controller.home.testCicd);
 };

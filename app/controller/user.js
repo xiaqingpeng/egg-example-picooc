@@ -60,6 +60,26 @@ class UserController extends Controller {
       ctx.body = { code: 401, msg: 'Not logged in' };
     }
   }
+
+  async getUserById() {
+    const { ctx } = this;
+    const { id } = ctx.params;
+
+    if (!id) {
+      ctx.status = 422;
+      ctx.body = { code: 422, msg: 'Missing user id' };
+      return;
+    }
+
+    const user = await ctx.service.user.getUserById(id);
+
+    if (user) {
+      ctx.body = { code: 0, msg: 'Success', data: user };
+    } else {
+      ctx.status = 404;
+      ctx.body = { code: 404, msg: 'User not found' };
+    }
+  }
 }
 
 module.exports = UserController;

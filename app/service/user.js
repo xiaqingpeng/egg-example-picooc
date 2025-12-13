@@ -51,6 +51,17 @@ class UserService extends Service {
       .update(password)
       .digest('hex');
   }
+
+  async getUserById(id) {
+    const { ctx } = this;
+    const user = await ctx.model.User.findByPk(id);
+    if (!user) return null;
+
+    // 从用户数据中排除password字段
+    const userInfo = { ...user.toJSON() };
+    delete userInfo.password;
+    return userInfo;
+  }
 }
 
 module.exports = UserService;
