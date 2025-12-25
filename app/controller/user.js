@@ -71,13 +71,26 @@ class UserController extends Controller {
       return;
     }
 
-    const user = await ctx.service.user.getUserById(id);
+    try {
+      const user = await ctx.service.user.getUserById(id);
 
-    if (user) {
-      ctx.body = { code: 0, msg: 'Success', data: user };
-    } else {
-      ctx.status = 404;
-      ctx.body = { code: 404, msg: 'User not found' };
+      if (user) {
+        ctx.body = { code: 0, msg: 'Success', data: user };
+      } else {
+        ctx.status = 404;
+        ctx.body = { code: 404, msg: 'User not found' };
+      }
+    } catch (error) {
+      // 数据库连接失败时的优雅处理
+      if (error.name === 'SequelizeConnectionRefusedError') {
+        ctx.status = 503;
+        ctx.body = { code: 503, msg: 'Database connection error', error: 'Service unavailable' };
+      } else {
+        ctx.status = 500;
+        ctx.body = { code: 500, msg: 'Internal server error', error: error.message };
+      }
+      // 记录详细错误日志便于排查
+      ctx.logger.error('Error in getUserById:', error);
     }
   }
 }

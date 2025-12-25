@@ -33,7 +33,12 @@ module.exports = () => {
             await ctx.model.ApiLog.create(data);
           } catch (e) {
             // 记录日志错误但不影响主请求
-            console.error('保存日志失败:', e.message);
+            // 更详细的错误处理，区分数据库连接错误和其他错误
+            if (e.name === 'SequelizeConnectionRefusedError') {
+              console.error('保存日志失败：数据库连接被拒绝，请检查数据库服务器是否运行以及连接参数是否正确:', e.message);
+            } else {
+              console.error('保存日志失败:', e.message);
+            }
           }
         }, 0);
       }
