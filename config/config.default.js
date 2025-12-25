@@ -38,19 +38,23 @@ module.exports = appInfo => {
     password: process.env.PG_PASSWORD || '1994514Xia@',
     timezone: '+08:00',
     quoteIdentifiers: true,
-    logging: console.log,
+    logging: false, // 关闭详细日志，提高性能
     define: {
       freezeTableName: true,
       underscored: false,
       quoteIdentifiers: true,
     },
     pool: {
-      max: 5,
+      max: 3, // 减少连接池大小，避免资源耗尽
       min: 0,
-      acquire: 30000,
+      acquire: 5000, // 缩短连接获取超时时间
       idle: 10000,
     },
-    enableSync: true,
+    enableSync: false, // 关闭自动同步，避免启动时数据库操作
+    dialectOptions: {
+      connectTimeout: 5000, // 数据库连接超时时间
+      statement_timeout: 5000, // SQL语句执行超时时间
+    },
   };
 
   config.security = {
