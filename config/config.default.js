@@ -51,6 +51,7 @@ module.exports = appInfo => {
       idle: 10000,
     },
     enableSync: false, // 关闭自动同步，避免启动时数据库操作
+    disableAuthenticate: true, // 关键：禁用启动时的数据库验证，避免应用阻塞
     dialectOptions: {
       connectTimeout: 5000, // 数据库连接超时时间
       statement_timeout: 5000, // SQL语句执行超时时间
