@@ -62,7 +62,7 @@ module.exports = appInfo => {
     csrf: {
       enable: true,
       ignoreJSON: false, // 关闭不安全配置，消除警告
-      ignore: [ '/system/logs/report', '/register', '/login', '/user/register' ], // 保留业务白名单
+      ignore: [ '/system/logs/report', '/register', '/login', '/user/register', '/user/change-password' ], // 保留业务白名单
     },
   };
 

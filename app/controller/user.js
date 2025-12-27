@@ -93,6 +93,51 @@ class UserController extends Controller {
       ctx.logger.error('Error in getUserById:', error);
     }
   }
+
+  async changePassword() {
+    const { ctx } = this;
+    const { oldPassword, newPassword, confirmPassword } = ctx.request.body;
+
+    // 检查用户是否已登录
+    if (!ctx.session.user) {
+      ctx.status = 401;
+      ctx.body = { code: 401, msg: 'Not logged in' };
+      return;
+    }
+
+    // 验证必填字段
+    if (!oldPassword || !newPassword || !confirmPassword) {
+      ctx.status = 422;
+      ctx.body = { code: 422, msg: 'Missing required fields' };
+      return;
+    }
+
+    // 验证新密码和确认密码是否匹配
+    if (newPassword !== confirmPassword) {
+      ctx.status = 422;
+      ctx.body = { code: 422, msg: 'New passwords do not match' };
+      return;
+    }
+
+    // 验证旧密码和新密码不能相同
+    if (oldPassword === newPassword) {
+      ctx.status = 422;
+      ctx.body = { code: 422, msg: 'New password must be different from old password' };
+      return;
+    }
+
+    try {
+      const user = await ctx.service.user.changePassword(
+        ctx.session.user.id,
+        oldPassword,
+        newPassword
+      );
+      ctx.body = { code: 0, msg: 'Password changed successfully', data: user };
+    } catch (error) {
+      ctx.status = error.status || 500;
+      ctx.body = { code: ctx.status, msg: error.message };
+    }
+  }
 }
 
 module.exports = UserController;

@@ -62,6 +62,35 @@ class UserService extends Service {
     delete userInfo.password;
     return userInfo;
   }
+
+  async changePassword(userId, oldPassword, newPassword) {
+    const { ctx } = this;
+    
+    // 查找用户
+    const user = await ctx.model.User.findByPk(userId);
+    if (!user) {
+      const error = new Error('User not found');
+      error.status = 404;
+      throw error;
+    }
+
+    // 验证旧密码
+    const hashedOldPassword = this.hashPassword(oldPassword);
+    if (user.password !== hashedOldPassword) {
+      const error = new Error('Old password is incorrect');
+      error.status = 401;
+      throw error;
+    }
+
+    // 更新密码
+    const hashedNewPassword = this.hashPassword(newPassword);
+    await user.update({ password: hashedNewPassword });
+
+    // 从用户数据中排除password字段
+    const userInfo = { ...user.toJSON() };
+    delete userInfo.password;
+    return userInfo;
+  }
 }
 
 module.exports = UserService;
