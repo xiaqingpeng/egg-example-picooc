@@ -13,7 +13,7 @@ class LogsController extends Controller {
       if (path) where.path = String(path);
       if (pathLike) where.path = { [Op.like]: `%${String(pathLike)}%` };
       if (method) where.method = String(method).toUpperCase();
-      if (platform) where.platform = String(platform);
+      if (platform) where.platform = { [Op.iLike]: String(platform) };
       if (startTime || endTime) {
         where.requestTime = {};
         if (startTime) where.requestTime[Op.gte] = new Date(String(startTime));

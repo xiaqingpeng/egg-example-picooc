@@ -63,7 +63,7 @@ class UserController extends Controller {
 
   async getUserById() {
     const { ctx } = this;
-    const { id } = ctx.params;
+    const { id } = ctx.query;
 
     if (!id) {
       ctx.status = 422;
