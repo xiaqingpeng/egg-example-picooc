@@ -3,6 +3,31 @@ module.exports = () => {
   return async (ctx, next) => {
     // 添加健康检查接口到跳过列表，确保它能快速响应
     const skipPaths = new Set([ '/system/logs/stats', '/system/logs/report', '/health', '/test-cicd', '/' ]);
+    
+    // 定义允许记录的路由白名单（基于 router.js 中定义的路由）
+    const allowedRoutes = new Set([
+      '/',
+      '/system/notice/list',
+      '/system/notice/db/list',
+      '/system/notice',
+      '/system/logs/stats',
+      '/system/logs/report',
+      '/register',
+      '/login',
+      '/user/info',
+      '/user',
+      '/test-cicd',
+      '/health',
+    ]);
+    
+    // 检查路径是否在白名单中（支持动态路由，如 /system/notice/:id）
+    const isAllowedRoute = (path) => {
+      if (allowedRoutes.has(path)) return true;
+      // 支持动态路由模式
+      if (path.startsWith('/system/notice/')) return true;
+      return false;
+    };
+    
     const start = Date.now();
     let platform = ctx.get('x-platform') || '';
     if (!platform) {
@@ -17,8 +42,8 @@ module.exports = () => {
       await next();
     } finally {
       const duration = Date.now() - start;
-      // 对于非跳过的路径，异步保存日志，不阻塞请求响应
-      if (!skipPaths.has(ctx.path)) {
+      // 对于非跳过的路径且在白名单中的路径，异步保存日志，不阻塞请求响应
+      if (!skipPaths.has(ctx.path) && isAllowedRoute(ctx.path)) {
         const data = {
           path: ctx.path,
           method: ctx.method,

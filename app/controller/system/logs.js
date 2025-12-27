@@ -10,6 +10,23 @@ class LogsController extends Controller {
       const where = {};
       const Op = ctx.app.Sequelize.Op;
       const { path, pathLike, method, platform, startTime, endTime } = ctx.query;
+      
+      // 时间查询示例（基于实际数据范围 2025-12-13 至 2025-12-27）：
+      // 1. 查询指定时间段的数据：
+      //    GET /system/logs/stats?startTime=2025-12-20T00:00:00Z&endTime=2025-12-25T23:59:59Z
+      // 2. 查询最近的数据：
+      //    GET /system/logs/stats?startTime=2025-12-25T00:00:00Z
+      // 3. 查询某个时间之前的数据：
+      //    GET /system/logs/stats?endTime=2025-12-20T12:00:00Z
+      // 4. 组合查询（平台+时间）：
+      //    GET /system/logs/stats?platform=Web&startTime=2025-12-20T00:00:00Z&endTime=2025-12-25T23:59:59Z
+      // 5. 完整查询示例（method=GET/POST, platform=Android/iOS/Mac/Web/Windows）：
+      //    GET /system/logs/stats?platform=Web&method=GET&startTime=2025-12-20T00:00:00Z&endTime=2025-12-25T23:59:59Z&pageNum=1&pageSize=20
+      //    GET /system/logs/stats?platform=Android&method=POST&startTime=2025-12-13T00:00:00Z&endTime=2025-12-16T23:59:59Z
+      // 注意：实际数据时间范围为 2025-12-13 至 2025-12-27，请在此范围内查询
+      //       可用的 method: GET, POST
+      //       可用的 platform: Android, iOS, Mac, Web, Windows
+      
       if (path) where.path = String(path);
       if (pathLike) where.path = { [Op.like]: `%${String(pathLike)}%` };
       if (method) where.method = String(method).toUpperCase();
@@ -36,6 +53,39 @@ class LogsController extends Controller {
     const { ctx } = this;
     try {
       const body = ctx.request.body || {};
+      
+      // 定义允许记录的路由白名单（基于 router.js 中定义的路由）
+      const allowedRoutes = new Set([
+        '/',
+        '/system/notice/list',
+        '/system/notice/db/list',
+        '/system/notice',
+        '/system/logs/stats',
+        '/system/logs/report',
+        '/register',
+        '/login',
+        '/user/info',
+        '/user',
+        '/test-cicd',
+        '/health',
+      ]);
+      
+      // 检查路径是否在白名单中（支持动态路由，如 /system/notice/:id）
+      const isAllowedRoute = (path) => {
+        if (allowedRoutes.has(path)) return true;
+        // 支持动态路由模式
+        if (path.startsWith('/system/notice/')) return true;
+        return false;
+      };
+      
+      const requestPath = String(body.path || ctx.path);
+      
+      // 验证路径是否在白名单中
+      if (!isAllowedRoute(requestPath)) {
+        ctx.body = { code: 400, msg: '不允许记录该路径的日志' };
+        return;
+      }
+      
       let platform = body.platform || ctx.get('x-platform') || '';
       if (!platform) {
         const ua = ctx.get('user-agent') || '';
@@ -46,7 +96,7 @@ class LogsController extends Controller {
         else platform = 'Web';
       }
       const data = {
-        path: String(body.path || ctx.path),
+        path: requestPath,
         method: String(body.method || ctx.method).toUpperCase(),
         ip: String(body.ip || ctx.ip),
         requestTime: body.requestTime ? new Date(String(body.requestTime)) : new Date(),
