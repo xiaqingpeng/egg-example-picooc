@@ -4,10 +4,7 @@ module.exports = {
     enable: true,
     package: 'egg-sequelize',
   },
-  multipart: {
-    enable: true,
-    package: 'egg-multipart',
-  },
+  // 移除 multipart 插件配置，Egg.js 3.x 已内置文件上传功能
   dotenv: {
     enable: true,
     package: 'egg-dotenv',
