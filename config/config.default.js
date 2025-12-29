@@ -87,7 +87,20 @@ module.exports = appInfo => {
     csrf: {
       enable: true,
       ignoreJSON: false, // 关闭不安全配置，消除警告
-      ignore: [ '/system/logs/report', '/register', '/login', '/user/register', '/user/change-password', '/user/avatar', '/user/info', '/api/user/uploadAvatar', '/api/upload/image', '/api/upload/file',  ], // 添加OSS上传接口到白名单
+      ignore: [
+        '/system/logs/report',
+        '/register',
+        '/login',
+        '/user/register',
+        '/user/change-password',
+        '/user/avatar',
+        '/user/info',
+        '/api/user/uploadAvatar',
+        '/api/upload/image',
+        '/api/upload/file',
+        '/test-cicd',
+        '/health',
+      ], // 添加OSS上传接口到白名单
     },
   };
 
