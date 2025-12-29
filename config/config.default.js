@@ -49,12 +49,34 @@ module.exports = appInfo => {
       min: 0,
       acquire: 5000, // 缩短连接获取超时时间
       idle: 10000,
+      evict: 30000, // 30秒后检查空闲连接
     },
     enableSync: false, // 关闭自动同步，避免启动时数据库操作
     disableAuthenticate: true, // 关键：禁用启动时的数据库验证，避免应用阻塞
     dialectOptions: {
       connectTimeout: 5000, // 数据库连接超时时间
       statement_timeout: 5000, // SQL语句执行超时时间
+      // 增加连接重试和健康检查配置
+      keepAlive: true, // 保持连接活跃
+      keepAliveInitialDelay: 10000, // 初始延迟10秒
+    },
+    // 增加重试配置
+    retry: {
+      max: 3, // 最大重试次数
+      match: [
+        /SequelizeConnectionError/,
+        /SequelizeConnectionRefusedError/,
+        /SequelizeHostNotFoundError/,
+        /SequelizeHostNotReachableError/,
+        /SequelizeInvalidConnectionError/,
+        /SequelizeConnectionTimedOutError/,
+      ],
+    },
+    // 增加健康检查配置
+    healthCheck: {
+      interval: 60000, // 每60秒检查一次
+      maxRetries: 3, // 最大重试次数
+      timeout: 5000, // 超时时间
     },
   };
 

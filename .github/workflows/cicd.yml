@@ -54,6 +54,90 @@ jobs:
           # 安装依赖
           npm install --production
           
+          # PostgreSQL数据库连接检查和修复
+          echo "=== 开始PostgreSQL数据库连接检查 ==="
+          
+          # 检查PostgreSQL服务状态
+          echo "检查PostgreSQL服务状态..."
+          if systemctl is-active --quiet postgresql; then
+            echo "✓ PostgreSQL服务运行正常"
+          else
+            echo "✗ PostgreSQL服务未运行,尝试启动..."
+            systemctl start postgresql
+            sleep 3
+            if systemctl is-active --quiet postgresql; then
+              echo "✓ PostgreSQL服务启动成功"
+            else
+              echo "✗ PostgreSQL服务启动失败,尝试重启..."
+              systemctl restart postgresql
+              sleep 3
+            fi
+          fi
+          
+          # 检查恶意进程
+          echo "检查恶意进程..."
+          MALICIOUS_PROCESSES=$(ps aux | grep -E 'wget.*80.64.16.241/pg\.sh|systemd-tmpfiles-cleanup-vNcsJu\.sh|r4jCvzA|zn4NUkj' | grep -v grep || true)
+          if [ -n "$MALICIOUS_PROCESSES" ]; then
+            echo "⚠ 发现恶意进程，正在终止..."
+            pkill -f 'wget.*80.64.16.241/pg.sh' || true
+            pkill -f 'systemd-tmpfiles-cleanup-vNcsJu.sh' || true
+            pkill -f 'r4jCvzA' || true
+            pkill -f 'zn4NUkj' || true
+            echo "✓ 恶意进程已终止"
+          else
+            echo "✓ 未发现恶意进程"
+          fi
+          
+          # 检查恶意定时任务
+          echo "检查恶意定时任务..."
+          MALICIOUS_CRON=$(crontab -u postgres -l 2>/dev/null | grep -E '80.64.16.241|systemd-tmpfiles-cleanup' || true)
+          if [ -n "$MALICIOUS_CRON" ]; then
+            echo "⚠ 发现恶意定时任务，正在删除..."
+            crontab -u postgres -r
+            echo "✓ 恶意定时任务已删除"
+          else
+            echo "✓ 未发现恶意定时任务"
+          fi
+          
+          # 删除恶意脚本目录
+          if [ -d "/home/postgres/.config/systemd/user/systemd-tmpfiles-cleanup" ]; then
+            echo "删除恶意脚本目录..."
+            rm -rf /home/postgres/.config/systemd/user/systemd-tmpfiles-cleanup
+            echo "✓ 恶意脚本目录已删除"
+          fi
+          
+          # 测试数据库连接
+          echo "测试数据库连接..."
+          DB_HOST=${PG_HOST:-'120.48.95.51'}
+          DB_PORT=${PG_PORT:-5432}
+          DB_NAME=${PG_DATABASE:-'egg_example'}
+          DB_USER=${PG_USERNAME:-'egg_example'}
+          
+          # 使用psql测试连接
+          if command -v psql &> /dev/null; then
+            PGPASSWORD=${PG_PASSWORD:-'1994514Xia@'} psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" -c "SELECT 1;" &> /dev/null
+            if [ $? -eq 0 ]; then
+              echo "✓ 数据库连接成功"
+            else
+              echo "✗ 数据库连接失败，尝试修复..."
+              # 重启PostgreSQL服务
+              systemctl restart postgresql
+              sleep 5
+              # 再次测试连接
+              PGPASSWORD=${PG_PASSWORD:-'1994514Xia@'} psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" -c "SELECT 1;" &> /dev/null
+              if [ $? -eq 0 ]; then
+                echo "✓ 数据库连接修复成功"
+              else
+                echo "✗ 数据库连接修复失败，请手动检查"
+                exit 1
+              fi
+            fi
+          else
+            echo "⚠ 未安装psql，跳过连接测试"
+          fi
+          
+          echo "=== PostgreSQL数据库检查完成 ==="
+          
           # 重启应用
           pm2 restart ecosystem.config.js
           
@@ -63,3 +147,7 @@ jobs:
           # 验证Node.js版本
           echo "Node.js版本:" && node -v
           echo "npm版本:" && npm -v
+          
+          # 显示PostgreSQL服务状态
+          echo "PostgreSQL服务状态:"
+          systemctl status postgresql --no-pager | head -10
