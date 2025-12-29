@@ -156,6 +156,15 @@ jobs:
           # 显示状态
           pm2 status
           
+          # 重启应用以加载最新代码
+          echo "重启PM2应用..."
+          pm2 restart egg-example-picooc || pm2 restart all
+          
+          # 验证应用状态
+          echo "验证应用状态..."
+          sleep 5
+          pm2 status
+          
           # 验证Node.js版本
           echo "Node.js版本:" && node -v
           echo "npm版本:" && npm -v
