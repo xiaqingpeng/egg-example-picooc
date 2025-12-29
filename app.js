@@ -1,3 +1,6 @@
+// 加载环境变量
+require('dotenv').config();
+
 module.exports = app => {
   app.beforeStart(async () => {
     const cfg = app.config.sequelize || {};

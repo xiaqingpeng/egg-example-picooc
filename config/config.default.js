@@ -1,5 +1,8 @@
 /* eslint valid-jsdoc: "off" */
 
+// 加载环境变量（必须在配置文件之前加载）
+require('dotenv').config();
+
 /**
  * @param {Egg.EggAppInfo} appInfo app info
  */
@@ -9,9 +12,6 @@ module.exports = appInfo => {
    * @type {Egg.EggAppConfig}
    **/
   const config = exports = {};
-
-  // 加载环境变量
-  require('dotenv').config();
 
   // use for cookie sign key, should change to your own and keep security
   config.keys = appInfo.name + '_1764404498717_5666';

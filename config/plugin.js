@@ -8,4 +8,8 @@ module.exports = {
     enable: true,
     package: 'egg-multipart',
   },
+  dotenv: {
+    enable: true,
+    package: 'egg-dotenv',
+  },
 };
