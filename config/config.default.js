@@ -10,6 +10,9 @@ module.exports = appInfo => {
    **/
   const config = exports = {};
 
+  // 加载环境变量
+  require('dotenv').config();
+
   // use for cookie sign key, should change to your own and keep security
   config.keys = appInfo.name + '_1764404498717_5666';
 
@@ -51,7 +54,7 @@ module.exports = appInfo => {
       idle: 10000,
       evict: 30000, // 30秒后检查空闲连接
     },
-    enableSync: false, // 关闭自动同步，避免启动时数据库操作
+    enableSync: true, // 启用自动同步，自动创建缺失的表
     disableAuthenticate: true, // 关键：禁用启动时的数据库验证，避免应用阻塞
     dialectOptions: {
       connectTimeout: 5000, // 数据库连接超时时间
@@ -84,8 +87,43 @@ module.exports = appInfo => {
     csrf: {
       enable: true,
       ignoreJSON: false, // 关闭不安全配置，消除警告
-      ignore: [ '/system/logs/report', '/register', '/login', '/user/register', '/user/change-password' ], // 保留业务白名单
+      ignore: [ '/system/logs/report', '/register', '/login', '/user/register', '/user/change-password', '/user/avatar', '/user/info', '/api/user/uploadAvatar', '/api/upload/image', '/api/upload/file',  ], // 添加OSS上传接口到白名单
     },
+  };
+
+  // 配置multipart文件上传
+  config.multipart = {
+    mode: 'file',
+    fileSize: '5mb', // 最大文件大小5MB
+    whitelist: [
+      '.jpg',
+      '.jpeg',
+      '.png',
+      '.gif',
+      '.webp',
+    ],
+    tmpdir: '/tmp', // 临时文件目录
+    cleanSchedule: {
+      cron: '0 30 3 * * *', // 每天凌晨3:30清理临时文件
+    },
+  };
+
+  // 配置文件上传URL（用于本地存储模式）
+  config.fileUpload = {
+    baseUrl: process.env.FILE_UPLOAD_BASE_URL || 'http://120.48.95.51:7001', // 基础URL（默认使用线上服务器地址）
+    avatarPath: '/public/avatars/', // 头像访问路径
+  };
+
+  // 配置阿里云OSS
+  config.oss = {
+    region: process.env.OSS_REGION || 'oss-cn-shenzhen', // OSS区域
+    accessKeyId: process.env.OSS_ACCESS_KEY_ID, // AccessKey ID（从环境变量读取）
+    accessKeySecret: process.env.OSS_ACCESS_KEY_SECRET, // AccessKey Secret（从环境变量读取）
+    bucket: process.env.OSS_BUCKET || 'qingpengxia', // 存储桶名称
+    // 可选：自定义域名
+    customDomain: process.env.OSS_CUSTOM_DOMAIN || '', // 自定义域名，例如：https://cdn.example.com
+    // 可选：上传目录
+    uploadDir: 'avatars', // 默认上传目录
   };
 
   return {

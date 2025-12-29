@@ -7,7 +7,10 @@
     "declarations": true
   },
   "dependencies": {
+    "ali-oss": "^6.23.0",
+    "dotenv": "^16.4.5",
     "egg": "^3.17.5",
+    "egg-multipart": "^3.5.0",
     "egg-scripts": "2",
     "egg-sequelize": "^6.0.0",
     "pg": "^8.16.3",

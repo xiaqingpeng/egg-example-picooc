@@ -133,14 +133,26 @@ jobs:
               fi
             fi
           else
-            echo "⚠ 未安装psql，跳过连接测试"
+            echo "⚠ 未安装psql 跳过连接测试"
           fi
           
           echo "=== PostgreSQL数据库检查完成 ==="
           
-          # 重启应用
-          pm2 restart ecosystem.config.js
+          # 执行数据库初始化脚本（创建缺失的表）
+          echo "=== 执行数据库初始化脚本 ==="
+          if [ -f "init-database.sql" ]; then
+            echo "执行 init-database.sql..."
+            PGPASSWORD=${PG_PASSWORD:-'1994514Xia@'} psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" -f init-database.sql
+            if [ $? -eq 0 ]; then
+              echo "✓ 数据库初始化脚本执行成功"
+            else
+              echo "⚠ 数据库初始化脚本执行失败，继续部署..."
+            fi
+          else
+            echo "⚠ 未找到 init-database.sql 文件"
+          fi
           
+    
           # 显示状态
           pm2 status
           

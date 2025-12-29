@@ -4,4 +4,8 @@ module.exports = {
     enable: true,
     package: 'egg-sequelize',
   },
+  multipart: {
+    enable: true,
+    package: 'egg-multipart',
+  },
 };

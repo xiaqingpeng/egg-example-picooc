@@ -20,8 +20,15 @@ module.exports = app => {
   router.get('/user', controller.user.getUserById);
   // 添加修改密码的接口（需要登录）
   router.post('/user/change-password', controller.user.changePassword);
+  // 添加上传头像的接口（需要登录）
+  router.post('/user/avatar', controller.user.uploadAvatar);
+  // 添加更新用户信息的接口（需要登录）
+  router.put('/user/info', controller.user.updateUserInfo);
   // 添加测试路由，用于验证CI/CD自动部署功能
   router.get('/test-cicd', controller.home.testCicd);
   // 添加健康检查接口，不依赖数据库
   router.get('/health', controller.home.health);
+
+   router.post('/api/upload/image', controller.oss2.upLoadImage); // 上传图片
+  router.post('/api/upload/file', controller.oss2.upLoadFile); // 上传图片
 };

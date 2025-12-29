@@ -53,11 +53,19 @@ class UserController extends Controller {
   async getUserInfo() {
     const { ctx } = this;
     // 检查用户是否已登录
-    if (ctx.session.user) {
-      ctx.body = { code: 0, msg: 'Success', data: ctx.session.user };
-    } else {
+    if (!ctx.session.user) {
       ctx.status = 401;
       ctx.body = { code: 401, msg: 'Not logged in' };
+      return;
+    }
+
+    // 从数据库重新查询用户信息，确保获取最新数据
+    const user = await ctx.service.user.getUserById(ctx.session.user.id);
+    if (user) {
+      ctx.body = { code: 0, msg: 'Success', data: user };
+    } else {
+      ctx.status = 404;
+      ctx.body = { code: 404, msg: 'User not found' };
     }
   }
 
@@ -136,6 +144,144 @@ class UserController extends Controller {
     } catch (error) {
       ctx.status = error.status || 500;
       ctx.body = { code: ctx.status, msg: error.message };
+    }
+  }
+
+  async uploadAvatar() {
+    const { ctx } = this;
+
+    // 检查用户是否已登录
+    if (!ctx.session.user) {
+      ctx.status = 401;
+      ctx.body = { code: 401, msg: 'Not logged in' };
+      return;
+    }
+
+    // 获取上传的文件
+    const file = ctx.request.files[0];
+    if (!file) {
+      ctx.status = 422;
+      ctx.body = { code: 422, msg: 'No file uploaded' };
+      return;
+    }
+
+    try {
+      // 验证文件类型（只允许图片）
+      const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+      if (!allowedTypes.includes(file.mime)) {
+        ctx.status = 422;
+        ctx.body = { code: 422, msg: 'Invalid file type. Only JPEG, PNG, GIF, and WebP are allowed' };
+        return;
+      }
+
+      // 验证文件大小（最大5MB）
+      const maxSize = 5 * 1024 * 1024; // 5MB
+      if (file.size > maxSize) {
+        ctx.status = 422;
+        ctx.body = { code: 422, msg: 'File size exceeds 5MB limit' };
+        return;
+      }
+
+      let avatarUrl;
+
+      // 检查是否配置了OSS
+      const ossConfig = this.app.config.oss;
+      if (ossConfig.client && ossConfig.client.accessKeyId && ossConfig.client.accessKeySecret && ossConfig.client.bucket) {
+        // 使用OSS上传
+        avatarUrl = await ctx.service.oss2.upLoadImage(file);
+        ctx.logger.info('头像上传到OSS成功:', avatarUrl);
+      } else {
+        // 使用本地存储
+        const fs = require('fs');
+        const path = require('path');
+        
+        // 生成文件名：用户ID_时间戳.扩展名
+        const ext = file.filename.split('.').pop();
+        const timestamp = Date.now();
+        const newFilename = `avatar_${ctx.session.user.id}_${timestamp}.${ext}`;
+
+        // 读取文件内容
+        const fileContent = fs.readFileSync(file.filepath);
+
+        // 创建上传目录（如果不存在）
+        const uploadDir = path.join(this.app.baseDir, 'app/public/avatars');
+        if (!fs.existsSync(uploadDir)) {
+          fs.mkdirSync(uploadDir, { recursive: true });
+        }
+
+        // 保存文件
+        const targetPath = path.join(uploadDir, newFilename);
+        fs.writeFileSync(targetPath, fileContent);
+
+        // 生成完整的网络访问URL
+        const baseUrl = this.app.config.fileUpload.baseUrl;
+        const avatarPath = this.app.config.fileUpload.avatarPath;
+        avatarUrl = `${baseUrl}${avatarPath}${newFilename}`;
+        
+        ctx.logger.info('头像上传到本地成功:', avatarUrl);
+      }
+
+      // 更新用户头像
+      const user = await ctx.service.user.updateUser(ctx.session.user.id, { avatar: avatarUrl });
+
+      // 更新session中的用户信息
+      ctx.session.user = user;
+
+      ctx.body = { code: 0, msg: 'Avatar uploaded successfully', data: { avatar: avatarUrl } };
+    } catch (error) {
+      ctx.status = error.status || 500;
+      ctx.body = { code: ctx.status, msg: error.message || 'Failed to upload avatar' };
+      ctx.logger.error('Error in uploadAvatar:', error);
+    } finally {
+      // 清理临时文件
+      if (file && file.filepath) {
+        const fs = require('fs');
+        try {
+          fs.unlinkSync(file.filepath);
+        } catch (err) {
+          ctx.logger.error('Failed to delete temp file:', err);
+        }
+      }
+    }
+  }
+
+  async updateUserInfo() {
+    const { ctx } = this;
+    const { username } = ctx.request.body;
+
+    // 检查用户是否已登录
+    if (!ctx.session.user) {
+      ctx.status = 401;
+      ctx.body = { code: 401, msg: 'Not logged in' };
+      return;
+    }
+
+    // 验证用户名
+    if (username !== undefined) {
+      if (!username || username.trim().length === 0) {
+        ctx.status = 422;
+        ctx.body = { code: 422, msg: 'Username cannot be empty' };
+        return;
+      }
+      if (username.length > 64) {
+        ctx.status = 422;
+        ctx.body = { code: 422, msg: 'Username cannot exceed 64 characters' };
+        return;
+      }
+    }
+
+    try {
+      // 更新用户信息
+      const user = await ctx.service.user.updateUser(ctx.session.user.id, { username });
+
+      // 更新session中的用户信息
+      ctx.session.user = user;
+
+      ctx.body = { code: 0, msg: 'User info updated successfully', data: user };
+    } catch (error) {
+      ctx.status = error.status || 500;
+      ctx.body = { code: ctx.status, msg: error.message };
+      ctx.logger.error('Error in updateUserInfo:', error);
     }
   }
 }

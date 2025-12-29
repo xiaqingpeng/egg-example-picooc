@@ -8,6 +8,7 @@ module.exports = app => {
     username: { type: STRING(64), allowNull: false, field: 'username' },
     email: { type: STRING(128), allowNull: false, unique: true, field: 'email' },
     password: { type: STRING(128), allowNull: false, field: 'password' },
+    avatar: { type: STRING(512), allowNull: true, field: 'avatar', comment: '用户头像URL' },
     createTime: { type: DATE, field: 'createtime' },
     updateTime: { type: DATE, field: 'updatetime' },
   }, {

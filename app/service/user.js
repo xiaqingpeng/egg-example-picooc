@@ -91,6 +91,44 @@ class UserService extends Service {
     delete userInfo.password;
     return userInfo;
   }
+
+  async updateUser(userId, updates) {
+    const { ctx } = this;
+    
+    // 查找用户
+    const user = await ctx.model.User.findByPk(userId);
+    if (!user) {
+      const error = new Error('User not found');
+      error.status = 404;
+      throw error;
+    }
+
+    // 允许更新的字段
+    const allowedFields = ['username', 'avatar'];
+    const updateData = {};
+
+    // 过滤并构建更新数据
+    for (const field of allowedFields) {
+      if (updates[field] !== undefined) {
+        updateData[field] = updates[field];
+      }
+    }
+
+    // 如果没有需要更新的字段，直接返回用户信息
+    if (Object.keys(updateData).length === 0) {
+      const userInfo = { ...user.toJSON() };
+      delete userInfo.password;
+      return userInfo;
+    }
+
+    // 更新用户信息
+    await user.update(updateData);
+
+    // 从用户数据中排除password字段
+    const userInfo = { ...user.toJSON() };
+    delete userInfo.password;
+    return userInfo;
+  }
 }
 
 module.exports = UserService;
