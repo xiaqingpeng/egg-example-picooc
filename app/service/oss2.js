@@ -6,11 +6,11 @@ const OSS = require('ali-oss');
 class OssService extends Service {
   async upLoadImage(file) {
     const { ctx, app } = this;
-    const { client } = app.config.oss;
+    const ossConfig = app.config.oss;
 
     try {
       // 创建阿里云 OSS 客户端
-      const ossClient = new OSS(client);
+      const ossClient = new OSS(ossConfig);
 
       // 生成唯一的文件名
       const fileName = `${Date.now()}_${Math.random().toString(36).slice(2)}`;
@@ -27,9 +27,9 @@ class OssService extends Service {
   }
   async upLoadFile({ filename, filepath }) {
     const { app } = this;
-    const { client } = app.config.oss;
+    const ossConfig = app.config.oss;
     // 创建阿里云 OSS 客户端
-    const ossClient = new OSS(client);
+    const ossClient = new OSS(ossConfig);
     try {
       const result = await ossClient.put(filename, filepath);
       return result;
