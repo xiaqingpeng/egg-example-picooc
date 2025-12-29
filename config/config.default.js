@@ -85,26 +85,7 @@ module.exports = appInfo => {
 
   config.security = {
     csrf: {
-      enable: true,
-      ignoreJSON: false, // 关闭不安全配置，消除警告
-      ignore: (ctx) => {
-        const path = ctx.path;
-        const ignorePaths = [
-          '/system/logs/report',
-          '/register',
-          '/login',
-          '/user/register',
-          '/user/change-password',
-          '/user/avatar',
-          '/user/info',
-          '/api/user/uploadAvatar',
-          '/api/upload/image',
-          '/api/upload/file',
-          '/test-cicd',
-          '/health',
-        ];
-        return ignorePaths.includes(path);
-      },
+      enable: false, // 临时禁用CSRF保护，用于测试文件上传功能
     },
   };
 
