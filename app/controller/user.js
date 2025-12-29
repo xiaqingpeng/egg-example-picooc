@@ -186,7 +186,7 @@ class UserController extends Controller {
 
       // 检查是否配置了OSS
       const ossConfig = this.app.config.oss;
-      if (ossConfig.client && ossConfig.client.accessKeyId && ossConfig.client.accessKeySecret && ossConfig.client.bucket) {
+      if (ossConfig.accessKeyId && ossConfig.accessKeySecret && ossConfig.bucket) {
         // 使用OSS上传
         avatarUrl = await ctx.service.oss2.upLoadImage(file);
         ctx.logger.info('头像上传到OSS成功:', avatarUrl);
