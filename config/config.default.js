@@ -97,6 +97,15 @@ module.exports = appInfo => {
     sessionKeyStrict: false,
   };
 
+  // 配置session
+  config.session = {
+    key: 'EGG_SESS', // session cookie的名称
+    maxAge: 24 * 3600 * 1000, // session有效期24小时
+    httpOnly: true, // 仅HTTP访问，防止XSS攻击
+    encrypt: true, // 加密session
+    sameSite: 'Lax', // 防止CSRF攻击
+  };
+
   // 配置multipart文件上传
   config.multipart = {
     mode: 'file',

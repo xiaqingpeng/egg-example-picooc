@@ -12,4 +12,8 @@ module.exports = {
     enable: true,
     package: 'egg-dotenv',
   },
+  session: {
+    enable: true,
+    package: 'egg-session',
+  },
 };
