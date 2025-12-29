@@ -87,6 +87,14 @@ module.exports = appInfo => {
     csrf: {
       enable: false, // 临时禁用CSRF保护，用于测试文件上传功能
     },
+    // 禁用其他安全限制
+    xframe: {
+      enable: false,
+    },
+    methodnoallow: {
+      enable: false,
+    },
+    sessionKeyStrict: false,
   };
 
   // 配置multipart文件上传
