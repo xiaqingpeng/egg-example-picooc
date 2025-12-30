@@ -31,4 +31,10 @@ module.exports = app => {
 
    router.post('/api/upload/image', controller.oss2.upLoadImage); // 上传图片
   router.post('/api/upload/file', controller.oss2.upLoadFile); // 上传图片
+
+  // 埋点事件接口
+  router.post('/api/analytics/events', controller.analytics.events); // 接收单个事件
+  router.post('/api/analytics/events/batch', controller.analytics.batchEvents); // 批量接收事件
+  router.get('/api/analytics/stats', controller.analytics.stats); // 查询事件统计
+  router.get('/api/analytics/events', controller.analytics.getEvents); // 查询事件列表
 };
