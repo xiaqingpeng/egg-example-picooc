@@ -246,7 +246,7 @@ class AnalyticsController extends Controller {
     }
 
     try {
-      const stats = await ctx.service.analytics.getEventStats(eventType, startDate, endDate);
+      const stats = await ctx.service.analytics.getEventStats(startDate, endDate);
       ctx.body = {
         success: true,
         data: stats
