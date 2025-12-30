@@ -223,7 +223,7 @@ class AnalyticsService extends Service {
    */
   async getActivityStats(startDate, endDate) {
     const { ctx } = this;
-    const { sequelize } = ctx.app;
+    const { sequelize } = ctx.model;
 
     try {
       // DAU统计
@@ -281,7 +281,7 @@ class AnalyticsService extends Service {
    */
   async getRetentionStats(days = 7) {
     const { ctx } = this;
-    const { sequelize } = ctx.app;
+    const { sequelize } = ctx.model;
 
     try {
       // 次日留存
@@ -390,27 +390,29 @@ class AnalyticsService extends Service {
    */
   async getPageViewStats(startDate, endDate) {
     const { ctx } = this;
-    const { sequelize } = ctx.app;
+    const { sequelize } = ctx.model;
 
     try {
       const stats = await sequelize.query(`
         SELECT 
-          properties->>'page' as page_name,
+          page_url,
           COUNT(*) as pv,
           COUNT(DISTINCT user_id) as uv
         FROM analytics_events
-        WHERE event_name = 'page_view'
-          AND DATE(created_at) >= :startDate 
+        WHERE DATE(created_at) >= :startDate 
           AND DATE(created_at) <= :endDate
-        GROUP BY properties->>'page'
+          AND event_name = 'page_view'
+          AND page_url IS NOT NULL
+        GROUP BY page_url
         ORDER BY pv DESC
+        LIMIT 20
       `, {
         replacements: { startDate, endDate },
         type: sequelize.QueryTypes.SELECT
       });
 
       return stats.map(item => ({
-        pageName: item.page_name,
+        pageUrl: item.page_url,
         pv: parseInt(item.pv),
         uv: parseInt(item.uv)
       }));
@@ -427,33 +429,31 @@ class AnalyticsService extends Service {
    * @param {string} endDate - 结束日期
    * @returns {Promise<Array>} 事件统计数据
    */
-  async getEventStats(eventType, startDate, endDate) {
+  async getEventStats(startDate, endDate, limit = 10) {
     const { ctx } = this;
-    const { sequelize } = ctx.app;
+    const { sequelize } = ctx.model;
 
     try {
       const stats = await sequelize.query(`
         SELECT 
           event_name,
           COUNT(*) as count,
-          COUNT(DISTINCT user_id) as unique_users,
-          AVG(duration) as avg_duration
+          COUNT(DISTINCT user_id) as unique_users
         FROM analytics_events
-        WHERE (:eventType IS NULL OR event_type = :eventType)
-          AND DATE(created_at) >= :startDate 
+        WHERE DATE(created_at) >= :startDate 
           AND DATE(created_at) <= :endDate
         GROUP BY event_name
         ORDER BY count DESC
+        LIMIT :limit
       `, {
-        replacements: { eventType, startDate, endDate },
+        replacements: { startDate, endDate, limit },
         type: sequelize.QueryTypes.SELECT
       });
 
       return stats.map(item => ({
         eventName: item.event_name,
         count: parseInt(item.count),
-        uniqueUsers: parseInt(item.unique_users),
-        avgDuration: item.avg_duration ? parseFloat(item.avg_duration).toFixed(2) : null
+        uniqueUsers: parseInt(item.unique_users)
       }));
     } catch (error) {
       ctx.logger.error('Failed to get event stats:', error);
@@ -506,6 +506,54 @@ class AnalyticsService extends Service {
     } catch (error) {
       ctx.logger.error('Failed to get trend analysis:', error);
       throw new Error('Failed to get trend analysis');
+    }
+  }
+  async getTrendStats(startDate, endDate, interval = 'day') {
+    const { ctx } = this;
+    const { sequelize } = ctx.model;
+
+    try {
+      let dateFormat;
+      switch (interval) {
+        case 'hour':
+          dateFormat = 'YYYY-MM-DD HH24:00:00';
+          break;
+        case 'day':
+          dateFormat = 'YYYY-MM-DD';
+          break;
+        case 'week':
+          dateFormat = 'IYYY-"W"IW';
+          break;
+        case 'month':
+          dateFormat = 'YYYY-MM';
+          break;
+        default:
+          dateFormat = 'YYYY-MM-DD';
+      }
+
+      const trend = await sequelize.query(`
+        SELECT 
+          TO_CHAR(created_at, '${dateFormat}') as time_period,
+          COUNT(*) as event_count,
+          COUNT(DISTINCT user_id) as unique_users
+        FROM analytics_events
+        WHERE DATE(created_at) >= :startDate 
+          AND DATE(created_at) <= :endDate
+        GROUP BY TO_CHAR(created_at, '${dateFormat}')
+        ORDER BY time_period
+      `, {
+        replacements: { startDate, endDate },
+        type: sequelize.QueryTypes.SELECT
+      });
+
+      return trend.map(item => ({
+        timePeriod: item.time_period,
+        eventCount: parseInt(item.event_count),
+        uniqueUsers: parseInt(item.unique_users)
+      }));
+    } catch (error) {
+      ctx.logger.error('Failed to get trend stats:', error);
+      throw new Error('Failed to get trend stats');
     }
   }
 }
