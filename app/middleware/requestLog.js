@@ -22,6 +22,24 @@ module.exports = () => {
       '/health',
       '/api/upload/image',
       '/api/upload/file',
+      // 埋点事件接口
+      '/api/analytics/events',
+      '/api/analytics/events/batch',
+      '/api/analytics/stats',
+      // 统计分析API
+      '/api/analytics/activity',
+      '/api/analytics/retention',
+      '/api/analytics/page-views',
+      '/api/analytics/event-stats',
+      '/api/analytics/trends',
+      // 用户画像API
+      '/api/user-profile',
+      '/api/user-profile/tags',
+      '/api/user-profile/behavior',
+      '/api/user-profile/interest',
+      '/api/user-profile/value',
+      '/api/user-profile/list',
+      '/api/user-profile/update-all',
     ]);
     
     // 检查路径是否在白名单中（支持动态路由，如 /system/notice/:id）
@@ -29,6 +47,11 @@ module.exports = () => {
       if (allowedRoutes.has(path)) return true;
       // 支持动态路由模式
       if (path.startsWith('/system/notice/')) return true;
+      // 支持用户画像动态路由：/api/user-profile/:userId
+      if (path.startsWith('/api/user-profile/') && path !== '/api/user-profile/tags' && 
+          path !== '/api/user-profile/behavior' && path !== '/api/user-profile/interest' &&
+          path !== '/api/user-profile/value' && path !== '/api/user-profile/list' &&
+          path !== '/api/user-profile/update-all') return true;
       return false;
     };
     
