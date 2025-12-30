@@ -232,8 +232,8 @@ class AnalyticsService extends Service {
           DATE(created_at) as date,
           COUNT(DISTINCT user_id) as dau
         FROM analytics_events
-        WHERE created_at >= :startDate 
-          AND created_at <= :endDate
+        WHERE DATE(created_at) >= :startDate 
+          AND DATE(created_at) <= :endDate
           AND user_id IS NOT NULL
         GROUP BY DATE(created_at)
         ORDER BY date
@@ -248,8 +248,8 @@ class AnalyticsService extends Service {
           DATE_TRUNC('month', created_at) as month,
           COUNT(DISTINCT user_id) as mau
         FROM analytics_events
-        WHERE created_at >= :startDate 
-          AND created_at <= :endDate
+        WHERE DATE(created_at) >= :startDate 
+          AND DATE(created_at) <= :endDate
           AND user_id IS NOT NULL
         GROUP BY DATE_TRUNC('month', created_at)
         ORDER BY month
@@ -400,8 +400,8 @@ class AnalyticsService extends Service {
           COUNT(DISTINCT user_id) as uv
         FROM analytics_events
         WHERE event_name = 'page_view'
-          AND created_at >= :startDate 
-          AND created_at <= :endDate
+          AND DATE(created_at) >= :startDate 
+          AND DATE(created_at) <= :endDate
         GROUP BY properties->>'page'
         ORDER BY pv DESC
       `, {
@@ -440,8 +440,8 @@ class AnalyticsService extends Service {
           AVG(duration) as avg_duration
         FROM analytics_events
         WHERE (:eventType IS NULL OR event_type = :eventType)
-          AND created_at >= :startDate 
-          AND created_at <= :endDate
+          AND DATE(created_at) >= :startDate 
+          AND DATE(created_at) <= :endDate
         GROUP BY event_name
         ORDER BY count DESC
       `, {
@@ -489,8 +489,8 @@ class AnalyticsService extends Service {
           COUNT(*) as count,
           COUNT(DISTINCT user_id) as unique_users
         FROM analytics_events
-        WHERE created_at >= :startDate 
-          AND created_at <= :endDate
+        WHERE DATE(created_at) >= :startDate 
+          AND DATE(created_at) <= :endDate
         GROUP BY ${timeTrunc}
         ORDER BY time_bucket
       `, {
