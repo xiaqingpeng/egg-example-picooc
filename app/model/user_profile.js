@@ -60,6 +60,12 @@ module.exports = app => {
       field: 'value_assessment',
       comment: '价值评估（JSON格式）'
     },
+    interestProfile: {
+      type: JSONB,
+      allowNull: true,
+      field: 'interest_profile',
+      comment: '兴趣画像（JSON格式）'
+    },
     activityLevel: {
       type: STRING(50),
       allowNull: true,
