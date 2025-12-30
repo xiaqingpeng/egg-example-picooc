@@ -395,15 +395,15 @@ class AnalyticsService extends Service {
     try {
       const stats = await sequelize.query(`
         SELECT 
-          page_url,
+          properties->>'page' as page_url,
           COUNT(*) as pv,
           COUNT(DISTINCT user_id) as uv
         FROM analytics_events
         WHERE DATE(created_at) >= :startDate 
           AND DATE(created_at) <= :endDate
           AND event_name = 'page_view'
-          AND page_url IS NOT NULL
-        GROUP BY page_url
+          AND properties->>'page' IS NOT NULL
+        GROUP BY properties->>'page'
         ORDER BY pv DESC
         LIMIT 20
       `, {
