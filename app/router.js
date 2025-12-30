@@ -52,6 +52,7 @@ module.exports = app => {
   router.get('/api/user-profile/interest', controller.userProfile.getUserInterestProfile); // 获取用户兴趣画像
   router.get('/api/user-profile/value', controller.userProfile.getUserValueAssessment); // 获取用户价值评估
   router.get('/api/user-profile/list', controller.userProfile.getUserList); // 获取用户列表
+  router.get('/api/analytics/users', controller.userProfile.getUserList); // 获取用户列表（兼容路径）
   router.put('/api/user-profile/:userId', controller.userProfile.updateUserProfile); // 更新单个用户画像
   router.post('/api/user-profile/update-all', controller.userProfile.updateAllUserProfiles); // 批量更新用户画像
 };
