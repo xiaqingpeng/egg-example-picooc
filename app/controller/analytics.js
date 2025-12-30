@@ -147,6 +147,150 @@ class AnalyticsController extends Controller {
       };
     }
   }
+
+  /**
+   * 获取DAU/MAU统计
+   */
+  async getActivityStats() {
+    const { ctx } = this;
+    const { startDate, endDate } = ctx.query;
+
+    if (!startDate || !endDate) {
+      ctx.status = 422;
+      ctx.body = { success: false, message: 'startDate and endDate are required' };
+      return;
+    }
+
+    try {
+      const stats = await ctx.service.analytics.getActivityStats(startDate, endDate);
+      ctx.body = {
+        success: true,
+        data: stats
+      };
+    } catch (error) {
+      ctx.logger.error('Analytics activity stats error:', error);
+      ctx.status = 500;
+      ctx.body = {
+        success: false,
+        message: 'Failed to get activity stats',
+        error: error.message
+      };
+    }
+  }
+
+  /**
+   * 获取留存率统计
+   */
+  async getRetentionStats() {
+    const { ctx } = this;
+    const { days } = ctx.query;
+
+    try {
+      const stats = await ctx.service.analytics.getRetentionStats(parseInt(days) || 7);
+      ctx.body = {
+        success: true,
+        data: stats
+      };
+    } catch (error) {
+      ctx.logger.error('Analytics retention stats error:', error);
+      ctx.status = 500;
+      ctx.body = {
+        success: false,
+        message: 'Failed to get retention stats',
+        error: error.message
+      };
+    }
+  }
+
+  /**
+   * 获取页面访问统计
+   */
+  async getPageViewStats() {
+    const { ctx } = this;
+    const { startDate, endDate } = ctx.query;
+
+    if (!startDate || !endDate) {
+      ctx.status = 422;
+      ctx.body = { success: false, message: 'startDate and endDate are required' };
+      return;
+    }
+
+    try {
+      const stats = await ctx.service.analytics.getPageViewStats(startDate, endDate);
+      ctx.body = {
+        success: true,
+        data: stats
+      };
+    } catch (error) {
+      ctx.logger.error('Analytics page view stats error:', error);
+      ctx.status = 500;
+      ctx.body = {
+        success: false,
+        message: 'Failed to get page view stats',
+        error: error.message
+      };
+    }
+  }
+
+  /**
+   * 获取事件统计
+   */
+  async getEventStats() {
+    const { ctx } = this;
+    const { eventType, startDate, endDate } = ctx.query;
+
+    if (!startDate || !endDate) {
+      ctx.status = 422;
+      ctx.body = { success: false, message: 'startDate and endDate are required' };
+      return;
+    }
+
+    try {
+      const stats = await ctx.service.analytics.getEventStats(eventType, startDate, endDate);
+      ctx.body = {
+        success: true,
+        data: stats
+      };
+    } catch (error) {
+      ctx.logger.error('Analytics event stats error:', error);
+      ctx.status = 500;
+      ctx.body = {
+        success: false,
+        message: 'Failed to get event stats',
+        error: error.message
+      };
+    }
+  }
+
+  /**
+   * 获取趋势分析
+   */
+  async getTrendAnalysis() {
+    const { ctx } = this;
+    const { metric, startDate, endDate, interval } = ctx.query;
+
+    if (!startDate || !endDate) {
+      ctx.status = 422;
+      ctx.body = { success: false, message: 'startDate and endDate are required' };
+      return;
+    }
+
+    try {
+      const trend = await ctx.service.analytics.getTrendAnalysis(metric, startDate, endDate, interval);
+      ctx.body = {
+        success: true,
+        data: trend
+      };
+    } catch (error) {
+      ctx.logger.error('Analytics trend analysis error:', error);
+      ctx.status = 500;
+      ctx.body = {
+        success: false,
+        message: 'Failed to get trend analysis',
+        error: error.message
+      };
+    }
+  }
 }
 
 module.exports = AnalyticsController;

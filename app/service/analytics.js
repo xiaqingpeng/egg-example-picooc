@@ -214,6 +214,300 @@ class AnalyticsService extends Service {
   generateRequestId() {
     return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
   }
+
+  /**
+   * 获取DAU/MAU统计
+   * @param {string} startDate - 开始日期
+   * @param {string} endDate - 结束日期
+   * @returns {Promise<Object>} DAU/MAU统计数据
+   */
+  async getActivityStats(startDate, endDate) {
+    const { ctx } = this;
+    const { sequelize } = ctx.app;
+
+    try {
+      // DAU统计
+      const dauStats = await sequelize.query(`
+        SELECT 
+          DATE(created_at) as date,
+          COUNT(DISTINCT user_id) as dau
+        FROM analytics_events
+        WHERE created_at >= :startDate 
+          AND created_at <= :endDate
+          AND user_id IS NOT NULL
+        GROUP BY DATE(created_at)
+        ORDER BY date
+      `, {
+        replacements: { startDate, endDate },
+        type: sequelize.QueryTypes.SELECT
+      });
+
+      // MAU统计
+      const mauStats = await sequelize.query(`
+        SELECT 
+          DATE_TRUNC('month', created_at) as month,
+          COUNT(DISTINCT user_id) as mau
+        FROM analytics_events
+        WHERE created_at >= :startDate 
+          AND created_at <= :endDate
+          AND user_id IS NOT NULL
+        GROUP BY DATE_TRUNC('month', created_at)
+        ORDER BY month
+      `, {
+        replacements: { startDate, endDate },
+        type: sequelize.QueryTypes.SELECT
+      });
+
+      return {
+        dauStats: dauStats.map(item => ({
+          date: item.date,
+          dau: parseInt(item.dau)
+        })),
+        mauStats: mauStats.map(item => ({
+          month: item.month,
+          mau: parseInt(item.mau)
+        }))
+      };
+    } catch (error) {
+      ctx.logger.error('Failed to get activity stats:', error);
+      throw new Error('Failed to get activity stats');
+    }
+  }
+
+  /**
+   * 获取留存率统计
+   * @param {number} days - 留存天数（1、7、30）
+   * @returns {Promise<Object>} 留存率数据
+   */
+  async getRetentionStats(days = 7) {
+    const { ctx } = this;
+    const { sequelize } = ctx.app;
+
+    try {
+      // 次日留存
+      const day1Retention = await sequelize.query(`
+        WITH user_first_login AS (
+          SELECT 
+            user_id,
+            MIN(DATE(created_at)) as first_date
+          FROM analytics_events
+          WHERE event_name = 'login_success'
+            AND user_id IS NOT NULL
+          GROUP BY user_id
+        ),
+        user_login_count AS (
+          SELECT 
+            ufl.user_id,
+            ufl.first_date,
+            COUNT(DISTINCT DATE(ae.created_at)) as login_days
+          FROM user_first_login ufl
+          LEFT JOIN analytics_events ae 
+            ON ufl.user_id = ae.user_id 
+            AND ae.event_name = 'login_success'
+            AND DATE(ae.created_at) >= ufl.first_date
+            AND DATE(ae.created_at) <= ufl.first_date + INTERVAL '1 day'
+          GROUP BY ufl.user_id, ufl.first_date
+        )
+        SELECT 
+          COUNT(CASE WHEN login_days >= 2 THEN 1 END) * 100.0 / COUNT(*) as day1_retention
+        FROM user_login_count
+      `, { type: sequelize.QueryTypes.SELECT });
+
+      // 7日留存
+      const day7Retention = await sequelize.query(`
+        WITH user_first_login AS (
+          SELECT 
+            user_id,
+            MIN(DATE(created_at)) as first_date
+          FROM analytics_events
+          WHERE event_name = 'login_success'
+            AND user_id IS NOT NULL
+          GROUP BY user_id
+        ),
+        user_login_count AS (
+          SELECT 
+            ufl.user_id,
+            ufl.first_date,
+            COUNT(DISTINCT DATE(ae.created_at)) as login_days
+          FROM user_first_login ufl
+          LEFT JOIN analytics_events ae 
+            ON ufl.user_id = ae.user_id 
+            AND ae.event_name = 'login_success'
+            AND DATE(ae.created_at) >= ufl.first_date
+            AND DATE(ae.created_at) <= ufl.first_date + INTERVAL '7 days'
+          GROUP BY ufl.user_id, ufl.first_date
+        )
+        SELECT 
+          COUNT(CASE WHEN login_days >= 2 THEN 1 END) * 100.0 / COUNT(*) as day7_retention
+        FROM user_login_count
+      `, { type: sequelize.QueryTypes.SELECT });
+
+      // 30日留存
+      const day30Retention = await sequelize.query(`
+        WITH user_first_login AS (
+          SELECT 
+            user_id,
+            MIN(DATE(created_at)) as first_date
+          FROM analytics_events
+          WHERE event_name = 'login_success'
+            AND user_id IS NOT NULL
+          GROUP BY user_id
+        ),
+        user_login_count AS (
+          SELECT 
+            ufl.user_id,
+            ufl.first_date,
+            COUNT(DISTINCT DATE(ae.created_at)) as login_days
+          FROM user_first_login ufl
+          LEFT JOIN analytics_events ae 
+            ON ufl.user_id = ae.user_id 
+            AND ae.event_name = 'login_success'
+            AND DATE(ae.created_at) >= ufl.first_date
+            AND DATE(ae.created_at) <= ufl.first_date + INTERVAL '30 days'
+          GROUP BY ufl.user_id, ufl.first_date
+        )
+        SELECT 
+          COUNT(CASE WHEN login_days >= 2 THEN 1 END) * 100.0 / COUNT(*) as day30_retention
+        FROM user_login_count
+      `, { type: sequelize.QueryTypes.SELECT });
+
+      return {
+        day1Retention: parseFloat(day1Retention[0]?.day1_retention || 0).toFixed(2),
+        day7Retention: parseFloat(day7Retention[0]?.day7_retention || 0).toFixed(2),
+        day30Retention: parseFloat(day30Retention[0]?.day30_retention || 0).toFixed(2)
+      };
+    } catch (error) {
+      ctx.logger.error('Failed to get retention stats:', error);
+      throw new Error('Failed to get retention stats');
+    }
+  }
+
+  /**
+   * 获取页面访问统计
+   * @param {string} startDate - 开始日期
+   * @param {string} endDate - 结束日期
+   * @returns {Promise<Array>} 页面访问统计数据
+   */
+  async getPageViewStats(startDate, endDate) {
+    const { ctx } = this;
+    const { sequelize } = ctx.app;
+
+    try {
+      const stats = await sequelize.query(`
+        SELECT 
+          properties->>'page' as page_name,
+          COUNT(*) as pv,
+          COUNT(DISTINCT user_id) as uv
+        FROM analytics_events
+        WHERE event_name = 'page_view'
+          AND created_at >= :startDate 
+          AND created_at <= :endDate
+        GROUP BY properties->>'page'
+        ORDER BY pv DESC
+      `, {
+        replacements: { startDate, endDate },
+        type: sequelize.QueryTypes.SELECT
+      });
+
+      return stats.map(item => ({
+        pageName: item.page_name,
+        pv: parseInt(item.pv),
+        uv: parseInt(item.uv)
+      }));
+    } catch (error) {
+      ctx.logger.error('Failed to get page view stats:', error);
+      throw new Error('Failed to get page view stats');
+    }
+  }
+
+  /**
+   * 获取事件统计
+   * @param {string} eventType - 事件类型（可选）
+   * @param {string} startDate - 开始日期
+   * @param {string} endDate - 结束日期
+   * @returns {Promise<Array>} 事件统计数据
+   */
+  async getEventStats(eventType, startDate, endDate) {
+    const { ctx } = this;
+    const { sequelize } = ctx.app;
+
+    try {
+      const stats = await sequelize.query(`
+        SELECT 
+          event_name,
+          COUNT(*) as count,
+          COUNT(DISTINCT user_id) as unique_users,
+          AVG(duration) as avg_duration
+        FROM analytics_events
+        WHERE (:eventType IS NULL OR event_type = :eventType)
+          AND created_at >= :startDate 
+          AND created_at <= :endDate
+        GROUP BY event_name
+        ORDER BY count DESC
+      `, {
+        replacements: { eventType, startDate, endDate },
+        type: sequelize.QueryTypes.SELECT
+      });
+
+      return stats.map(item => ({
+        eventName: item.event_name,
+        count: parseInt(item.count),
+        uniqueUsers: parseInt(item.unique_users),
+        avgDuration: item.avg_duration ? parseFloat(item.avg_duration).toFixed(2) : null
+      }));
+    } catch (error) {
+      ctx.logger.error('Failed to get event stats:', error);
+      throw new Error('Failed to get event stats');
+    }
+  }
+
+  /**
+   * 趋势分析API
+   * @param {string} metric - 指标类型
+   * @param {string} startDate - 开始日期
+   * @param {string} endDate - 结束日期
+   * @param {string} interval - 时间间隔（hour、day、week、month）
+   * @returns {Promise<Array>} 趋势分析数据
+   */
+  async getTrendAnalysis(metric, startDate, endDate, interval = 'day') {
+    const { ctx } = this;
+    const { sequelize } = ctx.app;
+
+    const intervalMap = {
+      'hour': "DATE_TRUNC('hour', created_at)",
+      'day': "DATE_TRUNC('day', created_at)",
+      'week': "DATE_TRUNC('week', created_at)",
+      'month': "DATE_TRUNC('month', created_at)"
+    };
+
+    const timeTrunc = intervalMap[interval] || intervalMap['day'];
+
+    try {
+      const trend = await sequelize.query(`
+        SELECT 
+          ${timeTrunc} as time_bucket,
+          COUNT(*) as count,
+          COUNT(DISTINCT user_id) as unique_users
+        FROM analytics_events
+        WHERE created_at >= :startDate 
+          AND created_at <= :endDate
+        GROUP BY ${timeTrunc}
+        ORDER BY time_bucket
+      `, {
+        replacements: { startDate, endDate },
+        type: sequelize.QueryTypes.SELECT
+      });
+
+      return trend.map(item => ({
+        timeBucket: item.time_bucket,
+        count: parseInt(item.count),
+        uniqueUsers: parseInt(item.unique_users)
+      }));
+    } catch (error) {
+      ctx.logger.error('Failed to get trend analysis:', error);
+      throw new Error('Failed to get trend analysis');
+    }
+  }
 }
 
 module.exports = AnalyticsService;

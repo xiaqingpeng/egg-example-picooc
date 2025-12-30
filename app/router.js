@@ -37,4 +37,21 @@ module.exports = app => {
   router.post('/api/analytics/events/batch', controller.analytics.batchEvents); // 批量接收事件
   router.get('/api/analytics/stats', controller.analytics.stats); // 查询事件统计
   router.get('/api/analytics/events', controller.analytics.getEvents); // 查询事件列表
+  
+  // 统计分析API
+  router.get('/api/analytics/activity', controller.analytics.getActivityStats); // 用户活跃度统计（DAU/MAU）
+  router.get('/api/analytics/retention', controller.analytics.getRetentionStats); // 留存率统计
+  router.get('/api/analytics/page-views', controller.analytics.getPageViewStats); // 页面访问统计
+  router.get('/api/analytics/event-stats', controller.analytics.getEventStats); // 事件统计
+  router.get('/api/analytics/trends', controller.analytics.getTrendAnalysis); // 趋势分析
+  
+  // 用户画像API
+  router.get('/api/user-profile', controller.userProfile.getUserProfile); // 获取用户完整画像
+  router.get('/api/user-profile/tags', controller.userProfile.getUserTags); // 获取用户标签
+  router.get('/api/user-profile/behavior', controller.userProfile.getUserBehaviorFeatures); // 获取用户行为特征
+  router.get('/api/user-profile/interest', controller.userProfile.getUserInterestProfile); // 获取用户兴趣画像
+  router.get('/api/user-profile/value', controller.userProfile.getUserValueAssessment); // 获取用户价值评估
+  router.get('/api/user-profile/list', controller.userProfile.getUserList); // 获取用户列表
+  router.put('/api/user-profile/:userId', controller.userProfile.updateUserProfile); // 更新单个用户画像
+  router.post('/api/user-profile/update-all', controller.userProfile.updateAllUserProfiles); // 批量更新用户画像
 };
