@@ -16,8 +16,12 @@ module.exports = () => {
       '/login',
       '/user/info',
       '/user',
+      '/user/change-password',
+      '/user/avatar',
       '/test-cicd',
       '/health',
+      '/api/upload/image',
+      '/api/upload/file',
     ]);
     
     // 检查路径是否在白名单中（支持动态路由，如 /system/notice/:id）
