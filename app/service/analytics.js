@@ -223,7 +223,7 @@ class AnalyticsService extends Service {
    */
   async getActivityStats(startDate, endDate) {
     const { ctx } = this;
-    const { sequelize } = ctx.model;
+    const sequelize = ctx.model;
 
     try {
       // DAU统计
@@ -281,7 +281,7 @@ class AnalyticsService extends Service {
    */
   async getRetentionStats(days = 7) {
     const { ctx } = this;
-    const { sequelize } = ctx.model;
+    const sequelize = ctx.model;
 
     try {
       // 次日留存
@@ -390,7 +390,7 @@ class AnalyticsService extends Service {
    */
   async getPageViewStats(startDate, endDate) {
     const { ctx } = this;
-    const { sequelize } = ctx.model;
+    const sequelize = ctx.model;
 
     try {
       const stats = await sequelize.query(`
@@ -431,7 +431,7 @@ class AnalyticsService extends Service {
    */
   async getEventStats(startDate, endDate, limit = 10) {
     const { ctx } = this;
-    const { sequelize } = ctx.model;
+    const sequelize = ctx.model;
 
     try {
       const stats = await sequelize.query(`
@@ -471,7 +471,7 @@ class AnalyticsService extends Service {
    */
   async getTrendAnalysis(metric, startDate, endDate, interval = 'day') {
     const { ctx } = this;
-    const { sequelize } = ctx.app;
+    const sequelize = ctx.model;
 
     const intervalMap = {
       'hour': "DATE_TRUNC('hour', created_at)",
@@ -510,7 +510,7 @@ class AnalyticsService extends Service {
   }
   async getTrendStats(startDate, endDate, interval = 'day') {
     const { ctx } = this;
-    const { sequelize } = ctx.model;
+    const sequelize = ctx.model;
 
     try {
       let dateFormat;
