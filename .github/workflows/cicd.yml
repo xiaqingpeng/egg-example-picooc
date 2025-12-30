@@ -48,8 +48,44 @@ jobs:
           # 进入项目目录
           cd /www/wwwroot/egg-example-picooc
           
-          # 拉取最新代码
-          git pull origin main
+          # 配置Git以处理网络问题
+          git config --global http.postBuffer 524288000
+          git config --global http.lowSpeedLimit 0
+          git config --global http.lowSpeedTime 999999
+          git config --global core.compression 0
+          
+          # 拉取最新代码（带重试机制）
+          echo "开始拉取最新代码..."
+          MAX_RETRIES=3
+          RETRY_COUNT=0
+          PULL_SUCCESS=false
+          
+          while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
+            echo "尝试拉取代码 (第 $((RETRY_COUNT + 1))/$MAX_RETRIES 次)..."
+            if git pull origin main; then
+              echo "✓ 代码拉取成功"
+              PULL_SUCCESS=true
+              break
+            else
+              RETRY_COUNT=$((RETRY_COUNT + 1))
+              if [ $RETRY_COUNT -lt $MAX_RETRIES ]; then
+                echo "✗ 代码拉取失败，等待5秒后重试..."
+                sleep 5
+              fi
+            fi
+          done
+          
+          if [ "$PULL_SUCCESS" = false ]; then
+            echo "✗ 代码拉取失败，尝试使用fetch和reset..."
+            git fetch origin main
+            git reset --hard origin/main
+            if [ $? -eq 0 ]; then
+              echo "✓ 代码更新成功（使用fetch+reset）"
+            else
+              echo "✗ 代码更新失败，部署终止"
+              exit 1
+            fi
+          fi
           
           # 安装依赖
           npm install --production
@@ -83,7 +119,14 @@ jobs:
             pkill -f 'systemd-tmpfiles-cleanup-vNcsJu.sh' || true
             pkill -f 'r4jCvzA' || true
             pkill -f 'zn4NUkj' || true
-            echo "✓ 恶意进程已终止"
+            sleep 2
+            # 验证进程是否已终止
+            REMAINING_PROCESSES=$(ps aux | grep -E 'wget.*80.64.16.241/pg\.sh|systemd-tmpfiles-cleanup-vNcsJu\.sh|r4jCvzA|zn4NUkj' | grep -v grep || true)
+            if [ -z "$REMAINING_PROCESSES" ]; then
+              echo "✓ 恶意进程已终止"
+            else
+              echo "⚠ 部分恶意进程仍在运行，继续部署..."
+            fi
           else
             echo "✓ 未发现恶意进程"
           fi
@@ -165,6 +208,33 @@ jobs:
           sleep 5
           pm2 status
           
+          # 健康检查
+          echo "执行应用健康检查..."
+          HEALTH_CHECK_RETRIES=5
+          HEALTH_CHECK_COUNT=0
+          HEALTH_CHECK_SUCCESS=false
+          
+          while [ $HEALTH_CHECK_COUNT -lt $HEALTH_CHECK_RETRIES ]; do
+            echo "健康检查 (第 $((HEALTH_CHECK_COUNT + 1))/$HEALTH_CHECK_RETRIES 次)..."
+            if curl -f -s http://localhost:7001/health > /dev/null 2>&1; then
+              echo "✓ 应用健康检查通过"
+              HEALTH_CHECK_SUCCESS=true
+              break
+            else
+              HEALTH_CHECK_COUNT=$((HEALTH_CHECK_COUNT + 1))
+              if [ $HEALTH_CHECK_COUNT -lt $HEALTH_CHECK_RETRIES ]; then
+                echo "⚠ 应用未响应，等待3秒后重试..."
+                sleep 3
+              fi
+            fi
+          done
+          
+          if [ "$HEALTH_CHECK_SUCCESS" = false ]; then
+            echo "✗ 应用健康检查失败，请检查应用日志"
+            pm2 logs --lines 20 --nostream
+            exit 1
+          fi
+          
           # 验证Node.js版本
           echo "Node.js版本:" && node -v
           echo "npm版本:" && npm -v
@@ -172,3 +242,5 @@ jobs:
           # 显示PostgreSQL服务状态
           echo "PostgreSQL服务状态:"
           systemctl status postgresql --no-pager | head -10
+          
+          echo "=== 部署完成 ==="
