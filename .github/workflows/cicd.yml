@@ -62,7 +62,7 @@ jobs:
           
           while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
             echo "尝试拉取代码 (第 $((RETRY_COUNT + 1))/$MAX_RETRIES 次)..."
-            if git pull origin main; then
+            if git pull gitee main; then
               echo "✓ 代码拉取成功"
               PULL_SUCCESS=true
               break
@@ -77,8 +77,8 @@ jobs:
           
           if [ "$PULL_SUCCESS" = false ]; then
             echo "✗ 代码拉取失败，尝试使用fetch和reset..."
-            git fetch origin main
-            git reset --hard origin/main
+            git fetch gitee main
+            git reset --hard gitee/main
             if [ $? -eq 0 ]; then
               echo "✓ 代码更新成功（使用fetch+reset）"
             else
