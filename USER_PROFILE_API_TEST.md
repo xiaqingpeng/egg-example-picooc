@@ -517,10 +517,10 @@ curl -X GET "http://120.48.95.51:7001/api/analytics/user/value?userId=2"
 curl -X GET "http://120.48.95.51:7001/api/analytics/user/list?page=1&pageSize=20"
 
 # 获取高活跃用户
-curl -X GET "http://120.48.95.51:7001/api/analytics/user/list?activityLevel=high"
+curl -X GET "http://120.48.95.51:7001/api/analytics/user/list?activityLevel=高活跃"
 
 # 获取核心用户
-curl -X GET "http://120.48.95.51:7001/api/analytics/user/list?valueLevel=core"
+curl -X GET "http://120.48.95.51:7001/api/analytics/user/list?valueLevel=核心用户"
 ```
 
 ### 预期响应（成功）

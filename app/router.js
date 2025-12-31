@@ -62,4 +62,5 @@ module.exports = app => {
   router.get('/api/analytics/user/behavior', controller.userProfile.getUserBehaviorFeatures); // 获取用户行为特征（兼容）
   router.get('/api/analytics/user/interest', controller.userProfile.getUserInterestProfile); // 获取用户兴趣画像（兼容）
   router.get('/api/analytics/user/value', controller.userProfile.getUserValueAssessment); // 获取用户价值评估（兼容）
+  router.get('/api/analytics/user/list', controller.userProfile.getUserList); // 获取用户列表（兼容）
 };
