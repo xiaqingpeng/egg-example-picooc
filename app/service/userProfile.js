@@ -10,27 +10,105 @@ class UserProfileService extends Service {
    */
   async getUserBasicInfo(userId) {
     const { ctx } = this;
-    const { sequelize } = ctx.app;
-
+    
     try {
-      const userInfo = await sequelize.query(`
-        SELECT 
-          user_id,
-          MIN(created_at) as register_time,
-          MAX(created_at) as last_active_time,
-          COUNT(*) as total_events,
-          COUNT(DISTINCT DATE(created_at)) as active_days
-        FROM analytics_events
-        WHERE user_id = :userId
-        GROUP BY user_id
-      `, {
-        replacements: { userId },
-        type: sequelize.QueryTypes.SELECT
-      });
+      console.log('[getUserBasicInfo] Method called with userId:', userId);
+      console.log('[getUserBasicInfo] ctx.model exists:', !!ctx.model);
+      console.log('[getUserBasicInfo] ctx.model type:', typeof ctx.model);
+      
+      const sequelize = ctx.model;
+      
+      console.log('[getUserBasicInfo] Sequelize instance:', sequelize);
+      console.log('[getUserBasicInfo] Sequelize type:', typeof sequelize);
 
-      return userInfo[0] || null;
+      if (!sequelize) {
+        console.error('[getUserBasicInfo] Sequelize instance is undefined!');
+        throw new Error('Sequelize instance is not available');
+      }
+
+      ctx.logger.info(`[getUserBasicInfo] Querying user info for userId: ${userId}`);
+      ctx.logger.info(`[getUserBasicInfo] Sequelize instance exists:`, !!sequelize);
+      ctx.logger.info(`[getUserBasicInfo] Sequelize query method exists:`, !!sequelize?.query);
+      
+      let userInfo;
+      try {
+        console.log('[getUserBasicInfo] About to execute query...');
+        ctx.logger.info('[getUserBasicInfo] About to execute query...');
+        
+        userInfo = await sequelize.query(`
+          SELECT 
+            user_id,
+            MIN(created_at) as register_time,
+            MAX(created_at) as last_active_time,
+            COUNT(*) as total_events,
+            COUNT(DISTINCT event_name) as unique_events
+          FROM analytics_events
+          WHERE user_id = :userId
+          GROUP BY user_id
+        `, {
+          replacements: { userId },
+          type: sequelize.QueryTypes.SELECT
+        });
+        
+        console.log('[getUserBasicInfo] Query completed, result:', userInfo);
+        console.log('[getUserBasicInfo] Result type:', typeof userInfo);
+        console.log('[getUserBasicInfo] Result is array:', Array.isArray(userInfo));
+        
+        if (userInfo && userInfo.length > 0) {
+          console.log('[getUserBasicInfo] First result item:', userInfo[0]);
+        }
+        
+        ctx.logger.info('[getUserBasicInfo] Query result:', userInfo);
+        
+        userInfo = await sequelize.query(`
+          SELECT 
+            user_id,
+            MIN(created_at) as register_time,
+            MAX(created_at) as last_active_time,
+            COUNT(*) as total_events,
+            COUNT(DISTINCT DATE(created_at)) as active_days
+          FROM analytics_events
+          WHERE user_id = :userId
+          GROUP BY user_id
+        `, {
+          replacements: { userId },
+          type: sequelize.QueryTypes.SELECT
+        });
+        
+        console.log('[getUserBasicInfo] Query executed successfully, result:', userInfo);
+        ctx.logger.info('[getUserBasicInfo] Query executed successfully');
+      } catch (queryError) {
+        console.error('[getUserBasicInfo] Query execution failed:', queryError);
+        ctx.logger.error('[getUserBasicInfo] Query execution failed:', queryError);
+        ctx.logger.error('[getUserBasicInfo] Query error message:', queryError.message);
+        ctx.logger.error('[getUserBasicInfo] Query error stack:', queryError.stack);
+        throw queryError;
+      }
+
+      console.log('[getUserBasicInfo] Query result type:', typeof userInfo);
+      console.log('[getUserBasicInfo] Query result is array:', Array.isArray(userInfo));
+      console.log('[getUserBasicInfo] Query result length:', userInfo?.length);
+      
+      ctx.logger.info('[getUserBasicInfo] Query result:', JSON.stringify(userInfo));
+      ctx.logger.info('[getUserBasicInfo] userInfo type:', typeof userInfo);
+      ctx.logger.info('[getUserBasicInfo] userInfo is array:', Array.isArray(userInfo));
+      ctx.logger.info('[getUserBasicInfo] userInfo length:', userInfo?.length);
+      
+      const result = userInfo[0] || null;
+      console.log('[getUserBasicInfo] Returning result:', result);
+      ctx.logger.info('[getUserBasicInfo] Returning result:', JSON.stringify(result));
+      
+      return result;
     } catch (error) {
-      ctx.logger.error('Failed to get user basic info:', error);
+      console.error('[getUserBasicInfo] Error caught:', error);
+      console.error('[getUserBasicInfo] Error message:', error.message);
+      console.error('[getUserBasicInfo] Error stack:', error.stack);
+      
+      ctx.logger.error('[getUserBasicInfo] Failed to get user basic info. Error message:', error.message);
+      ctx.logger.error('[getUserBasicInfo] Error stack:', error.stack);
+      ctx.logger.error('[getUserBasicInfo] Full error:', JSON.stringify(error));
+      ctx.logger.error('[getUserBasicInfo] Error name:', error.name);
+      ctx.logger.error('[getUserBasicInfo] Error constructor:', error.constructor.name);
       throw new Error('Failed to get user basic info');
     }
   }
@@ -89,7 +167,7 @@ class UserProfileService extends Service {
    */
   async getUserBehaviorFeatures(userId) {
     const { ctx } = this;
-    const { sequelize } = ctx.app;
+    const sequelize = ctx.model;
 
     try {
       // 访问频率
@@ -108,16 +186,17 @@ class UserProfileService extends Service {
         type: sequelize.QueryTypes.SELECT
       });
 
-      // 页面偏好
+      // 页面偏好 - 修复：使用properties::jsonb来转换TEXT为JSONB
       const pagePreference = await sequelize.query(`
         SELECT 
-          properties->>'page' as page_name,
+          properties::jsonb->>'page' as page_name,
           COUNT(*) as visit_count,
           COUNT(*) * 100.0 / SUM(COUNT(*)) OVER() as percentage
         FROM analytics_events
         WHERE user_id = :userId
           AND event_name = 'page_view'
-        GROUP BY properties->>'page'
+          AND properties::jsonb ? 'page'
+        GROUP BY properties::jsonb->>'page'
         ORDER BY visit_count DESC
         LIMIT 10
       `, {
@@ -358,7 +437,7 @@ class UserProfileService extends Service {
    */
   async updateAllUserProfiles() {
     const { ctx } = this;
-    const { sequelize } = ctx.app;
+    const sequelize = ctx.model;
 
     try {
       // 获取所有用户
