@@ -296,11 +296,11 @@ class UserProfileService extends Service {
 
       // 添加筛选条件
       if (activityLevel) {
-        where.activityLevel = activityLevel;
+        where.activity_level = activityLevel;
       }
 
       if (valueLevel) {
-        where.valueLevel = valueLevel;
+        where.value_level = valueLevel;
       }
 
       // 查询用户列表
@@ -308,10 +308,11 @@ class UserProfileService extends Service {
         where,
         offset,
         limit: parseInt(pageSize),
-        order: [['lastActiveTime', 'DESC']],
+        order: [[{ raw: 'last_active_time' }, 'DESC']],
         raw: true
       });
 
+      // 修复：使用数据库字段名映射，确保数据正确返回
       return {
         users: rows.map(user => ({
           userId: user.user_id,

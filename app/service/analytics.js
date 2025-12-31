@@ -258,6 +258,47 @@ class AnalyticsService extends Service {
         type: sequelize.QueryTypes.SELECT
       });
 
+      // 转化率统计 - 计算从page_view到其他关键事件的转化率
+      const conversionRate = await sequelize.query(`
+        WITH page_view_users AS (
+          SELECT DISTINCT user_id
+          FROM analytics_events
+          WHERE DATE(created_at) >= :startDate 
+            AND DATE(created_at) <= :endDate
+            AND event_name = 'page_view'
+            AND user_id IS NOT NULL
+        ),
+        key_events AS (
+          SELECT 
+            ae.event_name,
+            COUNT(DISTINCT ae.user_id) as user_count
+          FROM analytics_events ae
+          INNER JOIN page_view_users pvu ON ae.user_id = pvu.user_id
+          WHERE DATE(ae.created_at) >= :startDate 
+            AND DATE(ae.created_at) <= :endDate
+            AND ae.event_name IN ('login_success', 'register_success', 'purchase_success', 'button_click')
+            AND ae.user_id IS NOT NULL
+          GROUP BY ae.event_name
+        ),
+        total_users AS (
+          SELECT COUNT(*) as total FROM page_view_users
+        )
+        SELECT 
+          ke.event_name,
+          ke.user_count,
+          tu.total,
+          CASE 
+            WHEN tu.total = 0 THEN 0
+            ELSE (ke.user_count * 100.0 / tu.total)
+          END as conversion_rate
+        FROM key_events ke
+        CROSS JOIN total_users tu
+        ORDER BY conversion_rate DESC
+      `, {
+        replacements: { startDate, endDate },
+        type: sequelize.QueryTypes.SELECT
+      });
+
       return {
         dauStats: dauStats.map(item => ({
           date: item.date,
@@ -266,6 +307,12 @@ class AnalyticsService extends Service {
         mauStats: mauStats.map(item => ({
           month: item.month,
           mau: parseInt(item.mau)
+        })),
+        conversionRate: conversionRate.map(item => ({
+          eventName: item.event_name,
+          userCount: parseInt(item.user_count),
+          totalUsers: parseInt(item.total),
+          conversionRate: parseFloat(item.conversion_rate).toFixed(2)
         }))
       };
     } catch (error) {
