@@ -1,4 +1,4 @@
-# 用户画像API线上测试用例文档
+# 用户画像API测试与修复指南
 
 ## 文档信息
 - **创建时间**: 2025-12-31
@@ -9,16 +9,107 @@
 ---
 
 ## 目录
-1. [获取用户完整画像](#1-获取用户完整画像)
-2. [获取用户标签](#2-获取用户标签)
-3. [获取用户行为特征](#3-获取用户行为特征)
-4. [获取用户兴趣画像](#4-获取用户兴趣画像)
-5. [获取用户价值评估](#5-获取用户价值评估)
-6. [获取用户列表](#6-获取用户列表)
+1. [环境准备](#环境准备)
+2. [获取用户完整画像](#2-获取用户完整画像)
+3. [获取用户标签](#3-获取用户标签)
+4. [获取用户行为特征](#4-获取用户行为特征)
+5. [获取用户兴趣画像](#5-获取用户兴趣画像)
+6. [获取用户价值评估](#6-获取用户价值评估)
+7. [获取用户列表](#7-获取用户列表)
+8. [故障排查](#故障排查)
+9. [测试执行记录](#测试执行记录)
 
 ---
 
-## 1. 获取用户完整画像
+## 环境准备
+
+### 数据库连接信息
+- **主机**: 120.48.95.51
+- **端口**: 5432
+- **数据库**: egg_example
+- **用户名**: egg_example
+- **密码**: 1994514Xia@@
+
+### 创建 user_profiles 表
+
+如果数据库中缺少 `user_profiles` 表，需要先创建：
+
+```bash
+# 使用psql命令行工具
+psql -h 120.48.95.51 -p 5432 -U egg_example -d egg_example -f database/migrations/create_user_profiles.sql
+```
+
+或者手动执行SQL：
+
+```sql
+-- 创建用户画像表
+CREATE TABLE IF NOT EXISTS user_profiles (
+  id SERIAL PRIMARY KEY,
+  user_id VARCHAR(255) NOT NULL UNIQUE,
+  register_time TIMESTAMP,
+  last_active_time TIMESTAMP,
+  total_events INTEGER DEFAULT 0,
+  active_days INTEGER DEFAULT 0,
+  tags JSONB,
+  behavior_features JSONB,
+  value_assessment JSONB,
+  interest_profile JSONB,
+  activity_level VARCHAR(50),
+  value_level VARCHAR(50),
+  created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 创建索引
+CREATE INDEX IF NOT EXISTS idx_user_id ON user_profiles(user_id);
+CREATE INDEX IF NOT EXISTS idx_activity_level ON user_profiles(activity_level);
+CREATE INDEX IF NOT EXISTS idx_value_level ON user_profiles(value_level);
+CREATE INDEX IF NOT EXISTS idx_last_active_time ON user_profiles(last_active_time);
+
+-- 创建更新时间触发器
+CREATE OR REPLACE FUNCTION update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.updated_at = CURRENT_TIMESTAMP;
+  RETURN NEW;
+END;
+$$ language 'plpgsql';
+
+CREATE TRIGGER update_user_profiles_updated_at
+  BEFORE UPDATE ON user_profiles
+  FOR EACH ROW
+  EXECUTE FUNCTION update_updated_at_column();
+```
+
+### 填充用户画像数据
+
+有两种方式填充数据：
+
+#### 方式1：手动触发批量更新（推荐）
+
+```bash
+# 触发批量更新所有用户画像
+curl -X POST "http://120.48.95.51:7001/api/user-profile/update-all"
+```
+
+#### 方式2：等待定时任务自动执行
+
+定时任务配置在 `app/schedule/updateUserProfile.js`，会自动更新用户画像。
+
+### 手动更新单个用户画像
+
+```bash
+curl -X POST "http://120.48.95.51:7001/api/user-profile/update/{userId}"
+```
+
+例如：
+```bash
+curl -X POST "http://120.48.95.51:7001/api/user-profile/update/user123"
+```
+
+---
+
+## 2. 获取用户完整画像
 
 ### 接口信息
 - **接口路径**: `/api/analytics/user/profile`
@@ -140,7 +231,7 @@ curl -X GET "http://120.48.95.51:7001/api/analytics/user/profile?userId=2"
 
 ---
 
-## 2. 获取用户标签
+## 3. 获取用户标签
 
 ### 接口信息
 - **接口路径**: `/api/analytics/user/tags`
@@ -242,7 +333,7 @@ curl -X GET "http://120.48.95.51:7001/api/analytics/user/tags?userId=2"
 
 ---
 
-## 3. 获取用户行为特征
+## 4. 获取用户行为特征
 
 ### 接口信息
 - **接口路径**: `/api/analytics/user/behavior`
@@ -346,7 +437,7 @@ curl -X GET "http://120.48.95.51:7001/api/analytics/user/behavior?userId=2"
 
 ---
 
-## 4. 获取用户兴趣画像
+## 5. 获取用户兴趣画像
 
 ### 接口信息
 - **接口路径**: `/api/analytics/user/interest`
@@ -421,7 +512,7 @@ curl -X GET "http://120.48.95.51:7001/api/analytics/user/interest?userId=2"
 
 ---
 
-## 5. 获取用户价值评估
+## 6. 获取用户价值评估
 
 ### 接口信息
 - **接口路径**: `/api/analytics/user/value`
@@ -495,7 +586,7 @@ curl -X GET "http://120.48.95.51:7001/api/analytics/user/value?userId=2"
 
 ---
 
-## 6. 获取用户列表
+## 7. 获取用户列表
 
 ### 接口信息
 - **接口路径**: `/api/analytics/user/list`
@@ -527,7 +618,6 @@ curl -X GET "http://120.48.95.51:7001/api/analytics/user/list?activityLevel=%E9%
 
 # 获取核心用户（%E6%A0%B8%E5%BF%83%E7%94%A8%E6%88%B7 = 核心用户）
 curl -X GET "http://120.48.95.51:7001/api/analytics/user/list?valueLevel=%E6%A0%B8%E5%BF%83%E7%94%A8%E6%88%B7"
-
 ```
 
 ### 预期响应（成功）
@@ -664,44 +754,24 @@ curl -X GET "http://120.48.95.51:7001/api/analytics/user/list?valueLevel=%E6%A0%
 - **预期结果**: 系统正确转义特殊字符
 - **优先级**: P0
 
-### TC-034: 越权访问测试
-- **测试目的**: 验证系统对越权访问的防护
-- **前置条件**: 无
-- **测试步骤**:
-  1. 尝试访问其他用户的画像数据
-  2. 验证系统有适当的权限控制
-- **预期结果**: 系统有权限控制机制
-- **优先级**: P1
-
 ---
 
-## 测试环境准备
+## 故障排查
 
-### 数据准备
-```sql
--- 插入测试用户数据
-INSERT INTO analytics_events (user_id, event_name, properties, created_at) VALUES
-('1', 'page_view', '{"page": "home"}', NOW() - INTERVAL '30 days'),
-('1', 'page_view', '{"page": "profile"}', NOW() - INTERVAL '29 days'),
--- ... 更多测试数据
-('2', 'page_view', '{"page": "home"}', NOW() - INTERVAL '1 days'),
-('2', 'page_view', '{"page": "profile"}', NOW() - INTERVAL '1 hours');
-```
+### Q1: API返回空数据怎么办？
 
-### 测试工具
-- **API测试**: Postman、curl、HTTPie
-- **性能测试**: JMeter、Apache Bench
-- **自动化测试**: Jest、Mocha + Supertest
+**A:** 说明 `analytics_events` 表中没有数据，或者用户画像还没有生成。请先：
+1. 检查 `analytics_events` 表是否有数据
+2. 触发批量更新：`curl -X POST "http://120.48.95.51:7001/api/user-profile/update-all"`
 
----
+### Q2: API返回500错误怎么办？
 
-## 测试执行记录
+**A:** 检查应用日志，常见原因：
+1. `user_profiles` 表不存在
+2. 数据库连接失败
+3. SQL查询语法错误
 
-## 测试执行记录
-
-### 2025-12-31 测试记录
-
-#### 用户列表API修复记录
+### Q3: 用户列表API返回HTTP 500错误
 
 **问题**: 用户列表API返回HTTP 500错误，错误信息为"Failed to get user list"
 
@@ -751,6 +821,47 @@ const rows = await ctx.model.query(
 );
 ```
 
+**提交记录**:
+- 提交1: "修复用户列表API - 使用原生SQL查询替代Sequelize排序语法" (413cdc8)
+- 提交2: "优化用户列表API - 改进WHERE条件构建逻辑" (e713903)
+
+### Q4: 如何检查数据库中的用户画像数据？
+
+**A:** 连接到数据库查看数据：
+
+```sql
+-- 查看用户画像数据
+SELECT 
+  user_id,
+  register_time,
+  last_active_time,
+  total_events,
+  active_days,
+  activity_level,
+  value_level
+FROM user_profiles
+ORDER BY last_active_time DESC
+LIMIT 10;
+
+-- 查看高活跃用户
+SELECT * FROM user_profiles WHERE activity_level = '高活跃';
+
+-- 查看核心用户
+SELECT * FROM user_profiles WHERE value_level = '核心用户';
+```
+
+---
+
+## 测试执行记录
+
+### 2025-12-31 测试记录
+
+#### 用户列表API修复记录
+
+**问题**: 用户列表API返回HTTP 500错误，错误信息为"Failed to get user list"
+
+**修复结果**: ✅ API修复成功，返回正确的用户列表数据
+
 **测试结果**:
 ```bash
 # 测试命令
@@ -779,7 +890,6 @@ curl -X GET "http://120.48.95.51:7001/api/analytics/user/list?page=1&pageSize=5"
         "activityLevel": "低活跃",
         "valueLevel": "流失用户"
       }
-      // ... 更多用户数据
     ],
     "total": 28,
     "page": 1,
@@ -788,12 +898,6 @@ curl -X GET "http://120.48.95.51:7001/api/analytics/user/list?page=1&pageSize=5"
   }
 }
 ```
-
-**验证结果**: ✅ API修复成功，返回正确的用户列表数据
-
-**提交记录**:
-- 提交1: "修复用户列表API - 使用原生SQL查询替代Sequelize排序语法" (413cdc8)
-- 提交2: "优化用户列表API - 改进WHERE条件构建逻辑" (e713903)
 
 **相关文件**:
 - `/app/service/userProfile.js` - getUserList方法
@@ -808,3 +912,14 @@ curl -X GET "http://120.48.95.51:7001/api/analytics/user/list?page=1&pageSize=5"
 | TC-001 | | | | |
 | TC-002 | | | | |
 | ... | | | | |
+
+---
+
+## 相关文件
+
+- SQL脚本: `database/migrations/create_user_profiles.sql`
+- Service: `app/service/userProfile.js`
+- Controller: `app/controller/userProfile.js`
+- Model: `app/model/user_profile.js`
+- 定时任务: `app/schedule/updateUserProfile.js`
+- 路由配置: `app/router.js`
