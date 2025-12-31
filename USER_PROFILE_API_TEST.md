@@ -516,11 +516,18 @@ curl -X GET "http://120.48.95.51:7001/api/analytics/user/value?userId=2"
 # 获取第一页用户列表
 curl -X GET "http://120.48.95.51:7001/api/analytics/user/list?page=1&pageSize=20"
 
-# 获取高活跃用户
-curl -X GET "http://120.48.95.51:7001/api/analytics/user/list?activityLevel=高活跃"
+# 获取高活跃用户（使用URL编码处理中文参数）
+curl -X GET "http://120.48.95.51:7001/api/analytics/user/list" --get --data-urlencode "activityLevel=高活跃"
 
-# 获取核心用户
-curl -X GET "http://120.48.95.51:7001/api/analytics/user/list?valueLevel=核心用户"
+# 获取核心用户（使用URL编码处理中文参数）
+curl -X GET "http://120.48.95.51:7001/api/analytics/user/list" --get --data-urlencode "valueLevel=核心用户"
+
+# 或者使用URL编码后的参数（%E9%AB%98%E6%B4%BB%E8%B7%83 = 高活跃）
+curl -X GET "http://120.48.95.51:7001/api/analytics/user/list?activityLevel=%E9%AB%98%E6%B4%BB%E8%B7%83"
+
+# 获取核心用户（%E6%A0%B8%E5%BF%83%E7%94%A8%E6%88%B7 = 核心用户）
+curl -X GET "http://120.48.95.51:7001/api/analytics/user/list?valueLevel=%E6%A0%B8%E5%BF%83%E7%94%A8%E6%88%B7"
+
 ```
 
 ### 预期响应（成功）
