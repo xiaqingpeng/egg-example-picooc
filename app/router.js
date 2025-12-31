@@ -45,7 +45,7 @@ module.exports = app => {
   router.get('/api/analytics/event-stats', controller.analytics.getEventStats); // 事件统计
   router.get('/api/analytics/trends', controller.analytics.getTrendAnalysis); // 趋势分析
   
-  // 用户画像API
+  // 用户画像API - 原有路径
   router.get('/api/user-profile', controller.userProfile.getUserProfile); // 获取用户完整画像
   router.get('/api/user-profile/tags', controller.userProfile.getUserTags); // 获取用户标签
   router.get('/api/user-profile/behavior', controller.userProfile.getUserBehaviorFeatures); // 获取用户行为特征
@@ -55,4 +55,11 @@ module.exports = app => {
   router.get('/api/analytics/users', controller.userProfile.getUserList); // 获取用户列表（兼容路径）
   router.put('/api/user-profile/:userId', controller.userProfile.updateUserProfile); // 更新单个用户画像
   router.post('/api/user-profile/update-all', controller.userProfile.updateAllUserProfiles); // 批量更新用户画像
+  
+  // 用户画像API - 兼容前端路径 /api/analytics/user/...
+  router.get('/api/analytics/user/profile', controller.userProfile.getUserProfile); // 获取用户完整画像（兼容）
+  router.get('/api/analytics/user/tags', controller.userProfile.getUserTags); // 获取用户标签（兼容）
+  router.get('/api/analytics/user/behavior', controller.userProfile.getUserBehaviorFeatures); // 获取用户行为特征（兼容）
+  router.get('/api/analytics/user/interest', controller.userProfile.getUserInterestProfile); // 获取用户兴趣画像（兼容）
+  router.get('/api/analytics/user/value', controller.userProfile.getUserValueAssessment); // 获取用户价值评估（兼容）
 };

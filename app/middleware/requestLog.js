@@ -40,6 +40,12 @@ module.exports = () => {
       '/api/user-profile/value',
       '/api/user-profile/list',
       '/api/user-profile/update-all',
+      // 用户画像API - 兼容前端路径 /api/analytics/user/...
+      '/api/analytics/user/profile',
+      '/api/analytics/user/tags',
+      '/api/analytics/user/behavior',
+      '/api/analytics/user/interest',
+      '/api/analytics/user/value',
     ]);
     
     // 检查路径是否在白名单中（支持动态路由，如 /system/notice/:id）
