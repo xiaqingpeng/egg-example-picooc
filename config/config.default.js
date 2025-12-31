@@ -38,7 +38,7 @@ module.exports = appInfo => {
     port: Number(process.env.PG_PORT || 5432),
     database: process.env.PG_DATABASE || 'egg_example',
     username: process.env.PG_USERNAME || 'egg_example',
-    password: process.env.PG_PASSWORD || '1994514Xia@',
+    password: process.env.PG_PASSWORD || '1994514Xia@@',
     timezone: '+08:00',
     quoteIdentifiers: true,
     logging: false, // 关闭详细日志，提高性能
