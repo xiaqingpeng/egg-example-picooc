@@ -697,98 +697,114 @@ INSERT INTO analytics_events (user_id, event_name, properties, created_at) VALUE
 
 ## 测试执行记录
 
+## 测试执行记录
+
+### 2025-12-31 测试记录
+
+#### 用户列表API修复记录
+
+**问题**: 用户列表API返回HTTP 500错误，错误信息为"Failed to get user list"
+
+**根本原因**: 
+1. 原始实现使用Sequelize的findAndCountAll方法，在PostgreSQL数据库上存在排序语法兼容性问题
+2. WHERE条件构建使用了NULL参数化查询，导致SQL执行失败
+
+**修复方案**:
+1. 将Sequelize的findAndCountAll方法替换为原生SQL查询
+2. 改进WHERE条件构建逻辑，避免使用NULL参数化查询
+3. 使用动态条件构建，只在有筛选参数时才添加WHERE条件
+
+**修复代码**:
+```javascript
+// 构建WHERE条件
+const conditions = [];
+const replacements = {};
+
+if (activityLevel) {
+  conditions.push('activity_level = :activityLevel');
+  replacements.activityLevel = activityLevel;
+}
+
+if (valueLevel) {
+  conditions.push('value_level = :valueLevel');
+  replacements.valueLevel = valueLevel;
+}
+
+const whereClause = conditions.length > 0 ? conditions.join(' AND ') : '1=1';
+
+// 查询用户列表 - 使用原生SQL查询以避免Sequelize排序语法问题
+const countResult = await ctx.model.query(
+  `SELECT COUNT(*) as count FROM user_profiles WHERE ${whereClause}`,
+  {
+    replacements,
+    type: ctx.model.QueryTypes.SELECT
+  }
+);
+const count = parseInt(countResult[0].count);
+
+const rows = await ctx.model.query(
+  `SELECT user_id, register_time, last_active_time, total_events, active_days, activity_level, value_level FROM user_profiles WHERE ${whereClause} ORDER BY last_active_time DESC LIMIT :limit OFFSET :offset`,
+  {
+    replacements: { ...replacements, limit: parseInt(pageSize), offset },
+    type: ctx.model.QueryTypes.SELECT
+  }
+);
+```
+
+**测试结果**:
+```bash
+# 测试命令
+curl -X GET "http://120.48.95.51:7001/api/analytics/user/list?page=1&pageSize=5" -s
+
+# 测试结果
+{
+  "success": true,
+  "data": {
+    "users": [
+      {
+        "userId": "2",
+        "registerTime": "2025-12-31T02:21:25.514Z",
+        "lastActiveTime": "2025-12-31T07:10:27.004Z",
+        "totalEvents": 86,
+        "activeDays": 1,
+        "activityLevel": "低活跃",
+        "valueLevel": "流失用户"
+      },
+      {
+        "userId": "anonymous_8c1b8698-0e50-43d3-9561-ca17ad23856a",
+        "registerTime": "2025-12-31T07:10:26.730Z",
+        "lastActiveTime": "2025-12-31T07:10:26.860Z",
+        "totalEvents": 2,
+        "activeDays": 1,
+        "activityLevel": "低活跃",
+        "valueLevel": "流失用户"
+      }
+      // ... 更多用户数据
+    ],
+    "total": 28,
+    "page": 1,
+    "pageSize": 5,
+    "totalPages": 6
+  }
+}
+```
+
+**验证结果**: ✅ API修复成功，返回正确的用户列表数据
+
+**提交记录**:
+- 提交1: "修复用户列表API - 使用原生SQL查询替代Sequelize排序语法" (413cdc8)
+- 提交2: "优化用户列表API - 改进WHERE条件构建逻辑" (e713903)
+
+**相关文件**:
+- `/app/service/userProfile.js` - getUserList方法
+- `/app/controller/userProfile.js` - getUserList控制器
+- `/app/router.js` - 路由配置
+
+---
+
 | 用例编号 | 执行日期 | 执行人 | 结果 | 备注 |
 |----------|----------|--------|------|------|
+| TC-024 | 2025-12-31 | AI Assistant | ✅ 通过 | 用户列表API修复成功，返回正确数据 |
 | TC-001 | | | | |
 | TC-002 | | | | |
 | ... | | | | |
-
----
-
-## 常见问题
-
-### Q1: 接口返回500错误
-**原因**: 
-- 数据库连接失败
-- SQL查询错误
-- 代码逻辑错误
-
-**解决方法**:
-1. 检查服务器日志
-2. 验证数据库连接配置
-3. 检查SQL语句是否正确
-
-### Q2: 用户画像数据不准确
-**原因**:
-- 用户行为数据不完整
-- 标签生成逻辑需要调整
-- 数据更新延迟
-
-**解决方法**:
-1. 确认用户行为数据完整性
-2. 调整标签生成规则
-3. 检查定时任务是否正常运行
-
-### Q3: 接口响应慢
-**原因**:
-- 数据库查询未优化
-- 缺少索引
-- 数据量过大
-
-**解决方法**:
-1. 优化SQL查询
-2. 添加必要的数据库索引
-3. 考虑分页或缓存
-
----
-
-## 附录
-
-### A. HTTP状态码说明
-- **200**: 请求成功
-- **422**: 参数错误
-- **500**: 服务器内部错误
-
-### B. 错误码说明
-- **userId is required**: 缺少必填参数userId
-- **Failed to get user basic info**: 获取用户基础信息失败
-- **Failed to get user behavior features**: 获取用户行为特征失败
-- **Failed to get user tags**: 获取用户标签失败
-- **Failed to get user value assessment**: 获取用户价值评估失败
-
-### C. 标签生成规则
-- **活跃度标签**:
-  - 高活跃: activeDays >= 20
-  - 中活跃: 10 <= activeDays < 20
-  - 低活跃: activeDays < 10
-
-- **忠诚度标签**:
-  - 忠诚用户: daysSinceRegister > 30 && activeDays > 15
-  - 普通用户: daysSinceRegister > 7
-  - 新用户: daysSinceRegister <= 7
-
-- **价值标签**:
-  - 高价值: totalEvents > 1000
-  - 中价值: 500 < totalEvents <= 1000
-  - 低价值: totalEvents <= 500
-
-### D. 价值等级说明
-- **核心用户**: score > 80
-- **重要用户**: 60 < score <= 80
-- **普通用户**: 40 < score <= 60
-- **低价值用户**: 20 < score <= 40
-- **流失用户**: score <= 20
-
----
-
-## 更新记录
-
-| 版本 | 日期 | 修改内容 | 修改人 |
-|------|------|----------|--------|
-| v1.0 | 2025-12-31 | 初始版本 | AI Assistant |
-
----
-
-## 联系方式
-
-如有问题或建议，请联系开发团队。
