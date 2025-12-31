@@ -303,20 +303,36 @@ class UserProfileService extends Service {
         where.value_level = valueLevel;
       }
 
+      // 构建WHERE条件
+      const conditions = [];
+      const replacements = {};
+
+      if (activityLevel) {
+        conditions.push('activity_level = :activityLevel');
+        replacements.activityLevel = activityLevel;
+      }
+
+      if (valueLevel) {
+        conditions.push('value_level = :valueLevel');
+        replacements.valueLevel = valueLevel;
+      }
+
+      const whereClause = conditions.length > 0 ? conditions.join(' AND ') : '1=1';
+
       // 查询用户列表 - 使用原生SQL查询以避免Sequelize排序语法问题
       const countResult = await ctx.model.query(
-        'SELECT COUNT(*) as count FROM user_profiles WHERE (:activityLevel IS NULL OR activity_level = :activityLevel) AND (:valueLevel IS NULL OR value_level = :valueLevel)',
+        `SELECT COUNT(*) as count FROM user_profiles WHERE ${whereClause}`,
         {
-          replacements: { activityLevel, valueLevel },
+          replacements,
           type: ctx.model.QueryTypes.SELECT
         }
       );
       const count = parseInt(countResult[0].count);
 
       const rows = await ctx.model.query(
-        'SELECT user_id, register_time, last_active_time, total_events, active_days, activity_level, value_level FROM user_profiles WHERE (:activityLevel IS NULL OR activity_level = :activityLevel) AND (:valueLevel IS NULL OR value_level = :valueLevel) ORDER BY last_active_time DESC LIMIT :limit OFFSET :offset',
+        `SELECT user_id, register_time, last_active_time, total_events, active_days, activity_level, value_level FROM user_profiles WHERE ${whereClause} ORDER BY last_active_time DESC LIMIT :limit OFFSET :offset`,
         {
-          replacements: { activityLevel, valueLevel, limit: parseInt(pageSize), offset },
+          replacements: { ...replacements, limit: parseInt(pageSize), offset },
           type: ctx.model.QueryTypes.SELECT
         }
       );
