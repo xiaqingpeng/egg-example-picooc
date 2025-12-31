@@ -303,14 +303,23 @@ class UserProfileService extends Service {
         where.value_level = valueLevel;
       }
 
-      // 查询用户列表
-      const { count, rows } = await ctx.model.UserProfile.findAndCountAll({
-        where,
-        offset,
-        limit: parseInt(pageSize),
-        order: [[{ raw: 'last_active_time' }, 'DESC']],
-        raw: true
-      });
+      // 查询用户列表 - 使用原生SQL查询以避免Sequelize排序语法问题
+      const countResult = await ctx.model.query(
+        'SELECT COUNT(*) as count FROM user_profiles WHERE (:activityLevel IS NULL OR activity_level = :activityLevel) AND (:valueLevel IS NULL OR value_level = :valueLevel)',
+        {
+          replacements: { activityLevel, valueLevel },
+          type: ctx.model.QueryTypes.SELECT
+        }
+      );
+      const count = parseInt(countResult[0].count);
+
+      const rows = await ctx.model.query(
+        'SELECT user_id, register_time, last_active_time, total_events, active_days, activity_level, value_level FROM user_profiles WHERE (:activityLevel IS NULL OR activity_level = :activityLevel) AND (:valueLevel IS NULL OR value_level = :valueLevel) ORDER BY last_active_time DESC LIMIT :limit OFFSET :offset',
+        {
+          replacements: { activityLevel, valueLevel, limit: parseInt(pageSize), offset },
+          type: ctx.model.QueryTypes.SELECT
+        }
+      );
 
       // 修复：使用数据库字段名映射，确保数据正确返回
       return {
