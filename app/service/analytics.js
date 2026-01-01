@@ -509,14 +509,14 @@ class AnalyticsService extends Service {
   }
 
   /**
-   * 趋势分析API
-   * @param {string} metric - 指标类型
+   * 趋势分析API（支持多种指标类型）
+   * @param {string} metric - 指标类型：events, dau, page_views, unique_users, retention, performance
    * @param {string} startDate - 开始日期
    * @param {string} endDate - 结束日期
    * @param {string} interval - 时间间隔（hour、day、week、month）
    * @returns {Promise<Array>} 趋势分析数据
    */
-  async getTrendAnalysis(metric, startDate, endDate, interval = 'day') {
+  async getTrendAnalysis(metric = 'events', startDate, endDate, interval = 'day') {
     const { ctx } = this;
     const sequelize = ctx.model;
 
@@ -530,26 +530,219 @@ class AnalyticsService extends Service {
     const timeTrunc = intervalMap[interval] || intervalMap['day'];
 
     try {
-      const trend = await sequelize.query(`
-        SELECT 
-          ${timeTrunc} as time_bucket,
-          COUNT(*) as count,
-          COUNT(DISTINCT user_id) as unique_users
-        FROM analytics_events
-        WHERE DATE(created_at) >= :startDate 
-          AND DATE(created_at) <= :endDate
-        GROUP BY ${timeTrunc}
-        ORDER BY time_bucket
-      `, {
-        replacements: { startDate, endDate },
+      let query = '';
+      let replacements = { startDate, endDate };
+
+      // 根据metric类型构建不同的查询
+      switch (metric) {
+        case 'events':
+          // 事件总数趋势
+          query = `
+            SELECT 
+              ${timeTrunc} as time_bucket,
+              COUNT(*) as count,
+              COUNT(DISTINCT user_id) as unique_users
+            FROM analytics_events
+            WHERE DATE(created_at) >= :startDate 
+              AND DATE(created_at) <= :endDate
+            GROUP BY ${timeTrunc}
+            ORDER BY time_bucket
+          `;
+          break;
+
+        case 'dau':
+          // 日活跃用户数趋势
+          query = `
+            SELECT 
+              ${timeTrunc} as time_bucket,
+              COUNT(DISTINCT user_id) as dau,
+              COUNT(*) as total_events
+            FROM analytics_events
+            WHERE DATE(created_at) >= :startDate 
+              AND DATE(created_at) <= :endDate
+              AND user_id IS NOT NULL
+            GROUP BY ${timeTrunc}
+            ORDER BY time_bucket
+          `;
+          break;
+
+        case 'page_views':
+          // 页面访问量趋势
+          query = `
+            SELECT 
+              ${timeTrunc} as time_bucket,
+              COUNT(*) as page_views,
+              COUNT(DISTINCT user_id) as unique_visitors,
+              COUNT(DISTINCT properties::jsonb->>'page_name') as unique_pages
+            FROM analytics_events
+            WHERE DATE(created_at) >= :startDate 
+              AND DATE(created_at) <= :endDate
+              AND event_name = 'page_view'
+              AND properties::jsonb->>'page_name' IS NOT NULL
+            GROUP BY ${timeTrunc}
+            ORDER BY time_bucket
+          `;
+          break;
+
+        case 'unique_users':
+          // 唯一用户数趋势
+          query = `
+            SELECT 
+              ${timeTrunc} as time_bucket,
+              COUNT(DISTINCT user_id) as unique_users,
+              COUNT(*) as total_events
+            FROM analytics_events
+            WHERE DATE(created_at) >= :startDate 
+              AND DATE(created_at) <= :endDate
+              AND user_id IS NOT NULL
+            GROUP BY ${timeTrunc}
+            ORDER BY time_bucket
+          `;
+          break;
+
+        case 'retention':
+          // 留存率趋势（基于首次访问用户的后续访问）
+          query = `
+            WITH first_visits AS (
+              SELECT 
+                user_id,
+                MIN(DATE(created_at)) as first_visit_date
+              FROM analytics_events
+              WHERE user_id IS NOT NULL
+              GROUP BY user_id
+            ),
+            daily_retention AS (
+              SELECT 
+                ${timeTrunc} as time_bucket,
+                COUNT(DISTINCT fv.user_id) as new_users,
+                COUNT(DISTINCT CASE 
+                  WHEN DATE(ae.created_at) = fv.first_visit_date + INTERVAL '1 day' THEN fv.user_id 
+                END) as day1_retained,
+                COUNT(DISTINCT CASE 
+                  WHEN DATE(ae.created_at) = fv.first_visit_date + INTERVAL '7 days' THEN fv.user_id 
+                END) as day7_retained
+              FROM first_visits fv
+              LEFT JOIN analytics_events ae ON fv.user_id = ae.user_id
+              WHERE DATE(fv.first_visit_date) >= :startDate 
+                AND DATE(fv.first_visit_date) <= :endDate
+              GROUP BY ${timeTrunc}
+            )
+            SELECT 
+              time_bucket,
+              new_users,
+              day1_retained,
+              CASE WHEN new_users > 0 THEN (day1_retained * 100.0 / new_users) ELSE 0 END as day1_retention_rate,
+              day7_retained,
+              CASE WHEN new_users > 0 THEN (day7_retained * 100.0 / new_users) ELSE 0 END as day7_retention_rate
+            FROM daily_retention
+            ORDER BY time_bucket
+          `;
+          break;
+
+        case 'performance':
+          // 性能指标趋势（基于duration字段）
+          query = `
+            SELECT 
+              ${timeTrunc} as time_bucket,
+              COUNT(*) as total_events,
+              COUNT(CASE WHEN duration IS NOT NULL THEN 1 END) as events_with_duration,
+              AVG(CASE WHEN duration IS NOT NULL THEN duration END) as avg_duration,
+              PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY duration) as median_duration,
+              PERCENTILE_CONT(0.95) WITHIN GROUP (ORDER BY duration) as p95_duration
+            FROM analytics_events
+            WHERE DATE(created_at) >= :startDate 
+              AND DATE(created_at) <= :endDate
+              AND duration IS NOT NULL
+            GROUP BY ${timeTrunc}
+            ORDER BY time_bucket
+          `;
+          break;
+
+        default:
+          // 默认返回events趋势
+          query = `
+            SELECT 
+              ${timeTrunc} as time_bucket,
+              COUNT(*) as count,
+              COUNT(DISTINCT user_id) as unique_users
+            FROM analytics_events
+            WHERE DATE(created_at) >= :startDate 
+              AND DATE(created_at) <= :endDate
+            GROUP BY ${timeTrunc}
+            ORDER BY time_bucket
+          `;
+          break;
+      }
+
+      const trend = await sequelize.query(query, {
+        replacements,
         type: sequelize.QueryTypes.SELECT
       });
 
-      return trend.map(item => ({
-        timeBucket: item.time_bucket,
-        count: parseInt(item.count),
-        uniqueUsers: parseInt(item.unique_users)
-      }));
+      // 根据metric类型格式化返回数据
+      return trend.map(item => {
+        const baseData = {
+          timeBucket: item.time_bucket
+        };
+
+        switch (metric) {
+          case 'events':
+            return {
+              ...baseData,
+              count: parseInt(item.count),
+              uniqueUsers: parseInt(item.unique_users)
+            };
+
+          case 'dau':
+            return {
+              ...baseData,
+              dau: parseInt(item.dau),
+              totalEvents: parseInt(item.total_events)
+            };
+
+          case 'page_views':
+            return {
+              ...baseData,
+              pageViews: parseInt(item.page_views),
+              uniqueVisitors: parseInt(item.unique_visitors),
+              uniquePages: parseInt(item.unique_pages)
+            };
+
+          case 'unique_users':
+            return {
+              ...baseData,
+              uniqueUsers: parseInt(item.unique_users),
+              totalEvents: parseInt(item.total_events)
+            };
+
+          case 'retention':
+            return {
+              ...baseData,
+              newUsers: parseInt(item.new_users),
+              day1Retained: parseInt(item.day1_retained),
+              day1RetentionRate: parseFloat(item.day1_retention_rate).toFixed(2),
+              day7Retained: parseInt(item.day7_retained),
+              day7RetentionRate: parseFloat(item.day7_retention_rate).toFixed(2)
+            };
+
+          case 'performance':
+            return {
+              ...baseData,
+              totalEvents: parseInt(item.total_events),
+              eventsWithDuration: parseInt(item.events_with_duration),
+              avgDuration: parseFloat(item.avg_duration || 0).toFixed(2),
+              medianDuration: parseFloat(item.median_duration || 0).toFixed(2),
+              p95Duration: parseFloat(item.p95_duration || 0).toFixed(2)
+            };
+
+          default:
+            return {
+              ...baseData,
+              count: parseInt(item.count),
+              uniqueUsers: parseInt(item.unique_users)
+            };
+        }
+      });
     } catch (error) {
       ctx.logger.error('Failed to get trend analysis:', error);
       throw new Error('Failed to get trend analysis');
