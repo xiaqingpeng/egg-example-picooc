@@ -304,7 +304,7 @@ class UserProfileService extends Service {
       }
 
       // 构建WHERE条件
-      const conditions = [];
+      const conditions = ['user_id NOT LIKE \'anonymous_%\'']; // 过滤掉匿名用户
       const replacements = {};
 
       if (activityLevel) {
@@ -317,7 +317,7 @@ class UserProfileService extends Service {
         replacements.valueLevel = valueLevel;
       }
 
-      const whereClause = conditions.length > 0 ? conditions.join(' AND ') : '1=1';
+      const whereClause = conditions.join(' AND ');
 
       // 查询用户列表 - 使用原生SQL查询以避免Sequelize排序语法问题
       const countResult = await ctx.model.query(
