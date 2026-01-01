@@ -609,11 +609,12 @@ class AnalyticsService extends Service {
                 MIN(DATE(created_at)) as first_visit_date
               FROM analytics_events
               WHERE user_id IS NOT NULL
+                AND user_id NOT LIKE 'anonymous_%'
               GROUP BY user_id
             ),
             daily_retention AS (
               SELECT 
-                ${timeTrunc} as time_bucket,
+                fv.first_visit_date as time_bucket,
                 COUNT(DISTINCT fv.user_id) as new_users,
                 COUNT(DISTINCT CASE 
                   WHEN DATE(ae.created_at) = fv.first_visit_date + INTERVAL '1 day' THEN fv.user_id 
@@ -625,7 +626,7 @@ class AnalyticsService extends Service {
               LEFT JOIN analytics_events ae ON fv.user_id = ae.user_id
               WHERE DATE(fv.first_visit_date) >= :startDate 
                 AND DATE(fv.first_visit_date) <= :endDate
-              GROUP BY ${timeTrunc}
+              GROUP BY fv.first_visit_date
             )
             SELECT 
               time_bucket,
