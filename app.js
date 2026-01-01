@@ -13,10 +13,16 @@ module.exports = app => {
     if (isWorker && cfg.enableSync && app.model) {
       console.log('开始数据库表同步...');
       try {
+        // 使用默认的 sync() 模式，只创建不存在的表和索引
         await app.model.sync();
         app.logger.info('数据库模型同步成功');
       } catch (error) {
-        app.logger.error('数据库模型同步失败，但应用仍将继续启动:', error.message);
+        // 忽略索引已存在的错误，这些错误不影响应用运行
+        if (error.message && error.message.includes('already exists')) {
+          app.logger.warn('数据库索引已存在，跳过创建:', error.message);
+        } else {
+          app.logger.error('数据库模型同步失败，但应用仍将继续启动:', error.message);
+        }
       }
     }
   });

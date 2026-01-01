@@ -652,7 +652,6 @@ class AnalyticsService extends Service {
             FROM analytics_events
             WHERE DATE(created_at) >= :startDate 
               AND DATE(created_at) <= :endDate
-              AND duration IS NOT NULL
             GROUP BY ${timeTrunc}
             ORDER BY time_bucket
           `;
