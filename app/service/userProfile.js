@@ -130,14 +130,14 @@ class UserProfileService extends Service {
       // 页面偏好 - 修复：使用properties::jsonb来转换TEXT为JSONB
       const pagePreference = await sequelize.query(`
         SELECT 
-          properties::jsonb->>'page' as page_name,
+          properties::jsonb->>'page_url' as page_name,
           COUNT(*) as visit_count,
           COUNT(*) * 100.0 / SUM(COUNT(*)) OVER() as percentage
         FROM analytics_events
         WHERE user_id = :userId
           AND event_name = 'page_view'
-          AND properties::jsonb ? 'page'
-        GROUP BY properties::jsonb->>'page'
+          AND properties::jsonb ? 'page_url'
+        GROUP BY properties::jsonb->>'page_url'
         ORDER BY visit_count DESC
         LIMIT 10
       `, {
