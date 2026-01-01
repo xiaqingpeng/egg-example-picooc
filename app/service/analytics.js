@@ -720,9 +720,9 @@ class AnalyticsService extends Service {
               ...baseData,
               newUsers: parseInt(item.new_users),
               day1Retained: parseInt(item.day1_retained),
-              day1RetentionRate: parseFloat(item.day1_retention_rate).toFixed(2),
+              day1RetentionRate: parseFloat(item.day1_retention_rate),
               day7Retained: parseInt(item.day7_retained),
-              day7RetentionRate: parseFloat(item.day7_retention_rate).toFixed(2)
+              day7RetentionRate: parseFloat(item.day7_retention_rate)
             };
 
           case 'performance':
