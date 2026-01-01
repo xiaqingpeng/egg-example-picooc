@@ -2,7 +2,7 @@
 
 # ========================================
 # 双平台推送脚本
-# 功能：同时推送到Gitee和GitHub
+功能：同时推送到Gitee和GitHub，并检查GitHub CI/CD构建状态
 # ========================================
 
 # 颜色定义
@@ -10,7 +10,134 @@ RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
+CYAN='\033[0;36m'
 NC='\033[0m' # No Color
+
+# GitHub配置
+GITHUB_REPO="xiaqingpeng/egg-example-picooc"
+GITHUB_API_URL="https://api.github.com/repos/${GITHUB_REPO}/actions/runs"
+
+# 检查GitHub CLI是否安装
+check_github_cli() {
+    if command -v gh &> /dev/null; then
+        return 0
+    else
+        return 1
+    fi
+}
+
+# 检查GitHub API Token
+check_github_token() {
+    if [ -n "$GITHUB_TOKEN" ]; then
+        return 0
+    else
+        return 1
+    fi
+}
+
+# 获取最新一次GitHub Actions运行状态
+get_github_actions_status() {
+    echo ""
+    echo -e "${BLUE}========================================${NC}"
+    echo -e "${BLUE}    检查GitHub CI/CD构建状态${NC}"
+    echo -e "${BLUE}========================================${NC}"
+    
+    local latest_run
+    local status
+    local conclusion
+    local run_id
+    local run_url
+    
+    # 优先使用GitHub CLI
+    if check_github_cli; then
+        echo -e "${CYAN}使用GitHub CLI查询构建状态...${NC}"
+        
+        # 获取最新的workflow运行
+        latest_run=$(gh run list --repo "$GITHUB_REPO" --limit 1 --json databaseId,status,conclusion,htmlUrl 2>/dev/null)
+        
+        if [ $? -eq 0 ] && [ -n "$latest_run" ]; then
+            run_id=$(echo "$latest_run" | jq -r '.[0].databaseId')
+            status=$(echo "$latest_run" | jq -r '.[0].status')
+            conclusion=$(echo "$latest_run" | jq -r '.[0].conclusion')
+            run_url=$(echo "$latest_run" | jq -r '.[0].htmlUrl')
+            
+            display_run_status "$run_id" "$status" "$conclusion" "$run_url"
+            return 0
+        else
+            echo -e "${YELLOW}✗ GitHub CLI查询失败，尝试使用API...${NC}"
+        fi
+    fi
+    
+    # 使用GitHub API查询
+    if check_github_token; then
+        echo -e "${CYAN}使用GitHub API查询构建状态...${NC}"
+        
+        # 获取最新的workflow运行
+        local api_response
+        api_response=$(curl -s -H "Authorization: token $GITHUB_TOKEN" -H "Accept: application/vnd.github.v3+json" "$GITHUB_API_URL?per_page=1")
+        
+        if [ $? -eq 0 ]; then
+            run_id=$(echo "$api_response" | jq -r '.workflow_runs[0].id')
+            status=$(echo "$api_response" | jq -r '.workflow_runs[0].status')
+            conclusion=$(echo "$api_response" | jq -r '.workflow_runs[0].conclusion')
+            run_url=$(echo "$api_response" | jq -r '.workflow_runs[0].html_url')
+            
+            if [ "$run_id" != "null" ]; then
+                display_run_status "$run_id" "$status" "$conclusion" "$run_url"
+                return 0
+            else
+                echo -e "${YELLOW}✗ 未找到workflow运行记录${NC}"
+                return 1
+            fi
+        else
+            echo -e "${RED}✗ GitHub API请求失败${NC}"
+            return 1
+        fi
+    else
+        echo -e "${YELLOW}⚠️  未配置GITHUB_TOKEN，无法查询构建状态${NC}"
+        echo -e "${YELLOW}提示: 设置环境变量 GITHUB_TOKEN 来启用此功能${NC}"
+        echo -e "${CYAN}查看构建状态: https://github.com/${GITHUB_REPO}/actions${NC}"
+        return 1
+    fi
+}
+
+# 显示workflow运行状态
+display_run_status() {
+    local run_id="$1"
+    local status="$2"
+    local conclusion="$3"
+    local run_url="$4"
+    
+    echo ""
+    echo -e "${CYAN}构建信息:${NC}"
+    echo -e "  Run ID: ${run_id}"
+    echo -e "  状态: ${status}"
+    
+    if [ "$status" = "completed" ]; then
+        if [ "$conclusion" = "success" ]; then
+            echo -e "  结论: ${GREEN}✓ 成功${NC}"
+        elif [ "$conclusion" = "failure" ]; then
+            echo -e "  结论: ${RED}✗ 失败${NC}"
+        elif [ "$conclusion" = "cancelled" ]; then
+            echo -e "  结论: ${YELLOW}已取消${NC}"
+        else
+            echo -e "  结论: ${conclusion}"
+        fi
+    else
+        echo -e "  结论: ${YELLOW}运行中...${NC}"
+    fi
+    
+    echo -e "  详情: ${run_url}"
+    echo ""
+    
+    # 如果构建失败，提供快速查看日志的命令
+    if [ "$status" = "completed" ] && [ "$conclusion" = "failure" ]; then
+        if check_github_cli; then
+            echo -e "${YELLOW}查看失败日志:${NC}"
+            echo -e "  gh run view ${run_id} --repo ${GITHUB_REPO} --log-failed"
+        fi
+    fi
+}
 
 # 获取当前分支
 CURRENT_BRANCH=$(git branch --show-current)
@@ -95,3 +222,12 @@ git log -1 --oneline
 echo ""
 echo -e "${YELLOW}远程仓库状态:${NC}"
 git remote -v
+echo ""
+
+# 检查GitHub CI/CD构建状态
+get_github_actions_status
+
+echo ""
+echo -e "${GREEN}========================================${NC}"
+echo -e "${GREEN}✓ 脚本执行完成！${NC}"
+echo -e "${GREEN}========================================${NC}"
