@@ -53,13 +53,13 @@ get_github_actions_status() {
         echo -e "${CYAN}使用GitHub CLI查询构建状态...${NC}"
         
         # 获取最新的workflow运行
-        latest_run=$(gh run list --repo "$GITHUB_REPO" --limit 1 --json databaseId,status,conclusion,htmlUrl 2>/dev/null)
+        latest_run=$(gh run list --repo "$GITHUB_REPO" --limit 1 --json databaseId,status,conclusion,url 2>/dev/null)
         
         if [ $? -eq 0 ] && [ -n "$latest_run" ]; then
             run_id=$(echo "$latest_run" | jq -r '.[0].databaseId')
             status=$(echo "$latest_run" | jq -r '.[0].status')
             conclusion=$(echo "$latest_run" | jq -r '.[0].conclusion')
-            run_url=$(echo "$latest_run" | jq -r '.[0].htmlUrl')
+            run_url=$(echo "$latest_run" | jq -r '.[0].url')
             
             display_run_status "$run_id" "$status" "$conclusion" "$run_url"
             return 0
