@@ -80,6 +80,60 @@ class HomeController extends Controller {
    * - JSON解析失败时返回 code: 1 和错误信息
    * - HTTP状态码: 200（成功）或 500（失败）
    */
+  /**
+   * 获取系统信息
+   * 
+   * 接口路径: GET /system/info
+   * 
+   * 功能描述: 获取服务器的CPU、内存、磁盘、负载、网络流量等核心资源数据
+   * 
+   * 支持平台:
+   * - Linux: 使用 get_sys_info.sh 脚本获取系统信息
+   * - macOS: 使用 Node.js 内置模块和系统命令获取系统信息
+   * - 其他平台: 返回默认值，确保接口不会崩溃
+   * 
+   * 返回数据格式:
+   * {
+   *   code: 0,                    // 状态码：0表示成功，1表示失败
+   *   msg: "获取系统信息成功",    // 状态消息
+   *   data: {
+   *     cpu_usage: 4.8,          // CPU使用率（百分比）
+   *     mem_total: 1886,         // 总内存（MB）
+   *     mem_used: 1116,          // 已用内存（MB）
+   *     mem_usage: 59,           // 内存使用率（百分比）
+   *     disk_total: 40,          // 总磁盘空间（GB）
+   *     disk_used: 17,           // 已用磁盘空间（GB）
+   *     disk_usage: 42,          // 磁盘使用率（百分比）
+   *     load_1: 0.18,            // 1分钟平均负载
+   *     load_5: 0.05,            // 5分钟平均负载
+   *     load_15: 0.01,           // 15分钟平均负载
+   *     network_interface: "eth0",  // 网络接口名称
+   *     network_rx_bytes: 1234567890,  // 网络接收字节数（bytes）
+   *     network_tx_bytes: 987654321,   // 网络发送字节数（bytes）
+   *     network_rx_mb: 1177.38,   // 网络接收流量（MB）
+   *     network_tx_mb: 941.90,    // 网络发送流量（MB）
+   *     ip_address: "192.168.1.100",  // 服务器IP地址
+   *     os_info: "Ubuntu 20.04.3 LTS"  // 操作系统详细信息
+   *   },
+   *   platform: "linux",          // 操作系统平台（linux/darwin/win32等）
+   *   timestamp: "2026-01-05T02:48:56.287Z"  // 数据采集时间（ISO 8601格式）
+   * }
+   * 
+   * 使用示例:
+   * curl http://localhost:7001/system/info
+   * 
+   * 应用场景:
+   * - 服务器监控面板
+   * - 系统资源告警
+   * - 性能分析
+   * - 运维自动化
+   * - 网络流量监控
+   * 
+   * 错误处理:
+   * - 脚本执行失败时返回 code: 1 和错误信息
+   * - JSON解析失败时返回 code: 1 和错误信息
+   * - HTTP状态码: 200（成功）或 500（失败）
+   */
   async getSystemInfo() {
     const { ctx } = this;
     
@@ -228,6 +282,76 @@ class HomeController extends Controller {
       load15 = 0;
     }
     
+    // 获取网络流量信息
+    let networkInterface = '';
+    let networkRxBytes = 0;
+    let networkTxBytes = 0;
+    let networkRxMb = 0;
+    let networkTxMb = 0;
+    
+    if (platform === 'darwin') {
+      // macOS: 使用 netstat -ib 获取网络流量
+      try {
+        const { stdout } = await execAsync('netstat -ib');
+        const lines = stdout.trim().split('\n');
+        // 跳过表头
+        for (let i = 1; i < lines.length; i++) {
+          const line = lines[i].trim();
+          if (line) {
+            const parts = line.split(/\s+/);
+            // 网络接口名称在第一列
+            const iface = parts[0];
+            // 接收字节数在第7列，发送字节数在第10列
+            const rx = parseInt(parts[6]) || 0;
+            const tx = parseInt(parts[9]) || 0;
+            
+            // 跳过回环接口
+            if (iface !== 'lo0' && rx > 0) {
+              networkInterface = iface;
+              networkRxBytes = rx;
+              networkTxBytes = tx;
+              networkRxMb = parseFloat((rx / 1024 / 1024).toFixed(2));
+              networkTxMb = parseFloat((tx / 1024 / 1024).toFixed(2));
+              break;
+            }
+          }
+        }
+      } catch (error) {
+        console.error('获取macOS网络流量失败:', error);
+      }
+    } else if (platform === 'linux') {
+      // Linux: 读取 /proc/net/dev
+      try {
+        const { stdout } = await execAsync('cat /proc/net/dev');
+        const lines = stdout.trim().split('\n');
+        // 跳过表头
+        for (let i = 2; i < lines.length; i++) {
+          const line = lines[i].trim();
+          if (line) {
+            const colonIndex = line.indexOf(':');
+            const iface = line.substring(0, colonIndex).trim();
+            const data = line.substring(colonIndex + 1).trim().split(/\s+/);
+            
+            // 接收字节数是第一个字段，发送字节数是第9个字段
+            const rx = parseInt(data[0]) || 0;
+            const tx = parseInt(data[8]) || 0;
+            
+            // 跳过回环接口
+            if (iface !== 'lo' && rx > 0) {
+              networkInterface = iface;
+              networkRxBytes = rx;
+              networkTxBytes = tx;
+              networkRxMb = parseFloat((rx / 1024 / 1024).toFixed(2));
+              networkTxMb = parseFloat((tx / 1024 / 1024).toFixed(2));
+              break;
+            }
+          }
+        }
+      } catch (error) {
+        console.error('获取Linux网络流量失败:', error);
+      }
+    }
+    
     return {
       cpu_usage: cpuUsage,
       mem_total: memTotal,
@@ -239,6 +363,11 @@ class HomeController extends Controller {
       load_1: load1,
       load_5: load5,
       load_15: load15,
+      network_interface: networkInterface,
+      network_rx_bytes: networkRxBytes,
+      network_tx_bytes: networkTxBytes,
+      network_rx_mb: networkRxMb,
+      network_tx_mb: networkTxMb,
     };
   }
 
