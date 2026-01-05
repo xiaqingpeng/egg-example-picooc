@@ -32,7 +32,54 @@ class HomeController extends Controller {
     };
   }
 
-  // 获取系统信息接口（跨平台）
+  /**
+   * 获取系统信息接口（跨平台）
+   * 
+   * 接口路径: GET /system/info
+   * 
+   * 功能描述: 获取服务器的CPU、内存、磁盘、负载等核心资源数据
+   * 
+   * 支持平台:
+   * - Linux: 使用 get_sys_info.sh 脚本获取系统信息
+   * - macOS: 使用 Node.js 内置模块和系统命令获取系统信息
+   * - 其他平台: 返回默认值，确保接口不会崩溃
+   * 
+   * 返回数据格式:
+   * {
+   *   code: 0,                    // 状态码，0表示成功，1表示失败
+   *   msg: "获取系统信息成功",     // 状态消息
+   *   data: {
+   *     cpu_usage: 4.8,           // CPU使用率（百分比）
+   *     mem_total: 1886,          // 总内存（MB）
+   *     mem_used: 1116,           // 已用内存（MB）
+   *     mem_usage: 59,            // 内存使用率（百分比）
+   *     disk_total: 40,           // 总磁盘空间（GB）
+   *     disk_used: 17,            // 已用磁盘空间（GB）
+   *     disk_usage: 42,           // 磁盘使用率（百分比）
+   *     load_1: 0.18,             // 1分钟平均负载
+   *     load_5: 0.05,             // 5分钟平均负载
+   *     load_15: 0.01,            // 15分钟平均负载
+   *     ip_address: "192.168.1.100",  // 服务器内网IP地址
+   *     os_info: "Ubuntu 20.04.3 LTS"  // 操作系统详细信息
+   *   },
+   *   platform: "linux",          // 操作系统平台（linux/darwin/win32等）
+   *   timestamp: "2026-01-05T02:48:56.287Z"  // 数据采集时间（ISO 8601格式）
+   * }
+   * 
+   * 使用示例:
+   * curl http://localhost:7001/system/info
+   * 
+   * 应用场景:
+   * - 服务器监控面板
+   * - 系统资源告警
+   * - 性能分析
+   * - 运维自动化
+   * 
+   * 错误处理:
+   * - 脚本执行失败时返回 code: 1 和错误信息
+   * - JSON解析失败时返回 code: 1 和错误信息
+   * - HTTP状态码: 200（成功）或 500（失败）
+   */
   async getSystemInfo() {
     const { ctx } = this;
     
@@ -55,6 +102,16 @@ class HomeController extends Controller {
         // macOS或其他系统：使用Node.js内置模块获取信息
         systemInfo = await this.getSystemInfoNodeJS();
       }
+      
+      // 获取IP地址
+      const ipAddress = await this.getIPAddress();
+      
+      // 获取操作系统详细信息
+      const osInfo = await this.getOSInfo(platform);
+      
+      // 添加IP和系统信息到返回数据
+      systemInfo.ip_address = ipAddress;
+      systemInfo.os_info = osInfo;
       
       ctx.body = {
         code: 0,
@@ -199,6 +256,112 @@ class HomeController extends Controller {
     });
     
     return parseFloat(((total - idle) / total * 100).toFixed(2));
+  }
+
+  /**
+   * 获取服务器IP地址
+   * 优先返回内网IP地址，如果获取失败则返回127.0.0.1
+   */
+  async getIPAddress() {
+    try {
+      const interfaces = os.networkInterfaces();
+      
+      // 遍历所有网络接口
+      for (const interfaceName in interfaces) {
+        const interfaceInfo = interfaces[interfaceName];
+        
+        // 遍历接口的所有地址
+        for (const addr of interfaceInfo) {
+          // 跳过内部回环地址和非IPv4地址
+          if (!addr.internal && addr.family === 'IPv4') {
+            // 优先选择eth0、en0等主要网络接口
+            if (interfaceName.includes('eth') || interfaceName.includes('en')) {
+              return addr.address;
+            }
+          }
+        }
+      }
+      
+      // 如果没有找到主要网络接口，返回第一个非内部IPv4地址
+      for (const interfaceName in interfaces) {
+        const interfaceInfo = interfaces[interfaceName];
+        for (const addr of interfaceInfo) {
+          if (!addr.internal && addr.family === 'IPv4') {
+            return addr.address;
+          }
+        }
+      }
+      
+      // 如果都失败了，返回本地回环地址
+      return '127.0.0.1';
+    } catch (error) {
+      console.error('获取IP地址失败:', error);
+      return '127.0.0.1';
+    }
+  }
+
+  /**
+   * 获取操作系统详细信息
+   * @param {string} platform - 操作系统平台（linux/darwin/win32等）
+   */
+  async getOSInfo(platform) {
+    try {
+      if (platform === 'linux') {
+        // Linux系统：读取/etc/os-release文件获取发行版信息
+        try {
+          const { stdout } = await execAsync('cat /etc/os-release');
+          const lines = stdout.split('\n');
+          let osName = '';
+          let osVersion = '';
+          
+          for (const line of lines) {
+            if (line.startsWith('NAME=')) {
+              osName = line.match(/NAME="([^"]+)"/)?.[1] || line.match(/NAME=([^"]+)/)?.[1] || '';
+            } else if (line.startsWith('VERSION=')) {
+              osVersion = line.match(/VERSION="([^"]+)"/)?.[1] || line.match(/VERSION=([^"]+)/)?.[1] || '';
+            }
+          }
+          
+          if (osName) {
+            return osVersion ? `${osName} ${osVersion}` : osName;
+          }
+          
+          // 如果/etc/os-release不存在，尝试其他方法
+          try {
+            const { stdout: lsbOutput } = await execAsync('lsb_release -a 2>/dev/null || cat /etc/issue 2>/dev/null');
+            return lsbOutput.trim().split('\n')[0];
+          } catch (e) {
+            return 'Linux';
+          }
+        } catch (error) {
+          return 'Linux';
+        }
+      } else if (platform === 'darwin') {
+        // macOS系统：使用sw_vers命令获取系统版本
+        try {
+          const { stdout } = await execAsync('sw_vers');
+          const lines = stdout.split('\n');
+          const productName = lines[0]?.split(':')[1]?.trim() || '';
+          const productVersion = lines[1]?.split(':')[1]?.trim() || '';
+          return `${productName} ${productVersion}`;
+        } catch (error) {
+          return 'macOS';
+        }
+      } else if (platform === 'win32') {
+        // Windows系统
+        try {
+          const { stdout } = await execAsync('systeminfo | findstr /B /C:"OS Name" /C:"OS Version"');
+          return stdout.trim().replace(/OS Name:\s*/, '').replace(/OS Version:\s*/, ' ');
+        } catch (error) {
+          return 'Windows';
+        }
+      } else {
+        return platform;
+      }
+    } catch (error) {
+      console.error('获取操作系统信息失败:', error);
+      return platform;
+    }
   }
 }
 
