@@ -28,6 +28,8 @@ module.exports = app => {
   router.get('/test-cicd', controller.home.testCicd);
   // 添加健康检查接口，不依赖数据库
   router.get('/health', controller.home.health);
+  // 添加获取系统信息接口
+  router.get('/system/info', controller.home.getSystemInfo);
 
    router.post('/api/upload/image', controller.oss2.upLoadImage); // 上传图片
   router.post('/api/upload/file', controller.oss2.upLoadFile); // 上传图片
