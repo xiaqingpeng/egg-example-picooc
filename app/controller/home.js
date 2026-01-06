@@ -107,6 +107,7 @@ class HomeController extends Controller {
    *     load_1: 0.18,            // 1分钟平均负载
    *     load_5: 0.05,            // 5分钟平均负载
    *     load_15: 0.01,           // 15分钟平均负载
+   *     uptime_days: 12.5,        // 服务器运行时间（天数，保留2位小数）
    *     network_interface: "eth0",  // 网络接口名称
    *     network_rx_bytes: 1234567890,  // 网络接收字节数（bytes）
    *     network_tx_bytes: 987654321,   // 网络发送字节数（bytes）
@@ -117,7 +118,7 @@ class HomeController extends Controller {
    *   },
    *   platform: "linux",          // 操作系统平台（linux/darwin/win32等）
    *   timestamp: "2026-01-05T02:48:56.287Z"  // 数据采集时间（ISO 8601格式）
-   * }
+   }
    * 
    * 使用示例:
    * curl http://localhost:7001/system/info
@@ -193,6 +194,12 @@ class HomeController extends Controller {
     const totalmem = os.totalmem();
     const freemem = os.freemem();
     const usedmem = totalmem - freemem;
+    
+    // 获取服务器运行时间（天数）
+    // os.uptime() 返回系统运行时间（秒）
+    const uptimeSeconds = os.uptime();
+    // 转换为天数（保留2位小数）
+    const uptimeDays = parseFloat((uptimeSeconds / 86400).toFixed(2));
     
     // CPU使用率（简化计算）
     const cpuUsage = await this.getCPUUsage();
@@ -290,32 +297,42 @@ class HomeController extends Controller {
     let networkTxMb = 0;
     
     if (platform === 'darwin') {
-      // macOS: 使用 netstat -ib 获取网络流量
+      // macOS: 使用 ifconfig 替代 netstat，获取更快的网络流量信息
       try {
-        const { stdout } = await execAsync('netstat -ib');
-        const lines = stdout.trim().split('\n');
-        // 跳过表头
-        for (let i = 1; i < lines.length; i++) {
-          const line = lines[i].trim();
-          if (line) {
-            const parts = line.split(/\s+/);
-            // 网络接口名称在第一列
-            const iface = parts[0];
-            // 接收字节数在第7列，发送字节数在第10列
-            const rx = parseInt(parts[6]) || 0;
-            const tx = parseInt(parts[9]) || 0;
-            
-            // 跳过回环接口
-            if (iface !== 'lo0' && rx > 0) {
-              networkInterface = iface;
-              networkRxBytes = rx;
-              networkTxBytes = tx;
-              networkRxMb = parseFloat((rx / 1024 / 1024).toFixed(2));
-              networkTxMb = parseFloat((tx / 1024 / 1024).toFixed(2));
-              break;
-            }
-          }
-        }
+        // 获取默认网络接口
+        const { stdout: defaultIface } = await execAsync('route get default | grep interface | awk "{print $2}"');
+        const networkInterface = defaultIface.trim() || 'en0';
+        
+        // 使用ifconfig获取指定接口的流量信息
+        const { stdout: ifconfigOutput } = await execAsync(`ifconfig ${networkInterface}`);
+        
+        // 解析接收字节数（RX bytes）和发送字节数（TX bytes）
+        const rxMatch = ifconfigOutput.match(/RX bytes:(\d+)/i);
+        const txMatch = ifconfigOutput.match(/TX bytes:(\d+)/i);
+        
+        const networkRxBytes = rxMatch ? parseInt(rxMatch[1]) : 0;
+        const networkTxBytes = txMatch ? parseInt(txMatch[1]) : 0;
+        const networkRxMb = parseFloat((networkRxBytes / 1024 / 1024).toFixed(2));
+        const networkTxMb = parseFloat((networkTxBytes / 1024 / 1024).toFixed(2));
+        
+        return {
+          cpu_usage: cpuUsage,
+          mem_total: memTotal,
+          mem_used: memUsed,
+          mem_usage: memUsage,
+          disk_total: diskTotal,
+          disk_used: diskUsed,
+          disk_usage: diskUsage,
+          load_1: load1,
+          load_5: load5,
+          load_15: load15,
+          uptime_days: uptimeDays,
+          network_interface: networkInterface,
+          network_rx_bytes: networkRxBytes,
+          network_tx_bytes: networkTxBytes,
+          network_rx_mb: networkRxMb,
+          network_tx_mb: networkTxMb,
+        };
       } catch (error) {
         console.error('获取macOS网络流量失败:', error);
       }
@@ -363,6 +380,7 @@ class HomeController extends Controller {
       load_1: load1,
       load_5: load5,
       load_15: load15,
+      uptime_days: uptimeDays,
       network_interface: networkInterface,
       network_rx_bytes: networkRxBytes,
       network_tx_bytes: networkTxBytes,
