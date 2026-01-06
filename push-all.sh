@@ -2,7 +2,7 @@
 
 # ========================================
 # 双平台推送脚本
-功能：同时推送到Gitee和GitHub，并检查GitHub CI/CD构建状态
+# 功能：同时推送到Gitee和GitHub，并检查GitHub CI/CD构建状态
 # ========================================
 
 # 颜色定义
@@ -139,6 +139,53 @@ display_run_status() {
     fi
 }
 
+# 执行推送并处理强推选项
+execute_push() {
+    local remote="$1"
+    local branch="$2"
+    local platform="$3"
+    
+    echo -e "${YELLOW}[${4}/${5}] 推送到${platform}...${NC}"
+    
+    # 尝试正常推送
+    if git push "$remote" "$branch"; then
+        echo -e "${GREEN}✓ ${platform}推送成功${NC}"
+        return 0
+    else
+        # 检查推送失败原因
+        local push_output=$(git push "$remote" "$branch" 2>&1)
+        
+        # 如果是non-fast-forward错误，询问是否强推
+        if echo "$push_output" | grep -q "non-fast-forward"; then
+            echo -e "${RED}✗ ${platform}推送失败: 本地分支落后于远程分支${NC}"
+            echo -e "${YELLOW}提示: 远程分支有新的提交，需要先合并或使用强推${NC}"
+            
+            # 询问用户是否强推
+            read -p "是否使用强推? 这将覆盖远程分支的提交! (y/n) " -n 1 -r
+            echo
+            if [[ $REPLY =~ ^[Yy]$ ]]; then
+                echo -e "${YELLOW}执行强推到${platform}...${NC}"
+                if git push -f "$remote" "$branch"; then
+                    echo -e "${GREEN}✓ ${platform}强推成功${NC}"
+                    return 0
+                else
+                    echo -e "${RED}✗ ${platform}强推失败${NC}"
+                    return 1
+                fi
+            else
+                echo -e "${YELLOW}已取消${platform}强推${NC}"
+                return 1
+            fi
+        else
+            # 其他错误
+            echo -e "${RED}✗ ${platform}推送失败${NC}"
+            echo -e "${RED}错误信息:${NC}"
+            echo "$push_output"
+            return 1
+        fi
+    fi
+}
+
 # 获取当前分支
 CURRENT_BRANCH=$(git branch --show-current)
 
@@ -193,24 +240,18 @@ echo -e "${BLUE}========================================${NC}"
 echo ""
 
 # 推送到Gitee
-echo -e "${YELLOW}[1/2] 推送到Gitee...${NC}"
-if git push gitee "$CURRENT_BRANCH"; then
-    echo -e "${GREEN}✓ Gitee推送成功${NC}"
+if execute_push "gitee" "$CURRENT_BRANCH" "Gitee" "1" "2"; then
+    echo ""
 else
-    echo -e "${RED}✗ Gitee推送失败${NC}"
     exit 1
 fi
-echo ""
 
 # 推送到GitHub
-echo -e "${YELLOW}[2/2] 推送到GitHub...${NC}"
-if git push github "$CURRENT_BRANCH"; then
-    echo -e "${GREEN}✓ GitHub推送成功${NC}"
+if execute_push "github" "$CURRENT_BRANCH" "GitHub" "2" "2"; then
+    echo ""
 else
-    echo -e "${RED}✗ GitHub推送失败${NC}"
     exit 1
 fi
-echo ""
 
 # 推送完成
 echo -e "${BLUE}========================================${NC}"
