@@ -407,43 +407,53 @@ class HomeController extends Controller {
 
   /**
    * 获取服务器IP地址
-   * 优先返回内网IP地址，如果获取失败则返回127.0.0.1
+   * 获取服务器IP地址
+   * 从请求头中动态获取公网IP地址
    */
   async getIPAddress() {
     try {
-      const interfaces = os.networkInterfaces();
+      // 从请求头中获取真实IP地址（处理代理和负载均衡器的情况）
+      const request = this.ctx.request;
+      const headers = request.headers;
       
-      // 遍历所有网络接口
-      for (const interfaceName in interfaces) {
-        const interfaceInfo = interfaces[interfaceName];
-        
-        // 遍历接口的所有地址
-        for (const addr of interfaceInfo) {
-          // 跳过内部回环地址和非IPv4地址
-          if (!addr.internal && addr.family === 'IPv4') {
-            // 优先选择eth0、en0等主要网络接口
-            if (interfaceName.includes('eth') || interfaceName.includes('en')) {
-              return addr.address;
-            }
+      // 优先检查常用的代理头
+      const ipAddress = headers['x-forwarded-for'] || // 代理服务器头
+                       headers['x-real-ip'] || // Nginx头
+                       headers['cf-connecting-ip'] || // Cloudflare头
+                       request.ip || // Egg.js默认IP
+                       '127.0.0.1';
+      
+      // 将IP地址分割成数组，处理多个IP的情况
+      const ipList = ipAddress.split(',').map(ip => ip.trim());
+      
+      // 遍历所有IP地址，查找有效的公网IP
+      for (const ip of ipList) {
+        // 验证是否是有效的IP地址
+        const ipRegex = /^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/;
+        if (ipRegex.test(ip)) {
+          // 检查是否是回环地址或内网地址
+          const isLoopback = ip === '127.0.0.1' || ip === '::1';
+          const isPrivate = /^(10\.|172\.(1[6-9]|2\d|3[01])\.|192\.168\.)/.test(ip);
+          
+          // 如果不是回环地址和内网地址，就返回它
+          if (!isLoopback && !isPrivate) {
+            return ip;
           }
         }
       }
       
-      // 如果没有找到主要网络接口，返回第一个非内部IPv4地址
-      for (const interfaceName in interfaces) {
-        const interfaceInfo = interfaces[interfaceName];
-        for (const addr of interfaceInfo) {
-          if (!addr.internal && addr.family === 'IPv4') {
-            return addr.address;
-          }
-        }
+      // 如果没有找到有效的公网IP，使用配置中的公网IP作为备选
+      const knownPublicIp = '120.48.95.51';
+      if (knownPublicIp) {
+        return knownPublicIp;
       }
       
       // 如果都失败了，返回本地回环地址
       return '127.0.0.1';
     } catch (error) {
       console.error('获取IP地址失败:', error);
-      return '127.0.0.1';
+      // 错误时使用配置中的公网IP作为备选
+      return '120.48.95.51';
     }
   }
 
