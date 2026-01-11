@@ -1,8 +1,38 @@
 'use strict';
 
 const Controller = require('egg').Controller;
+const crypto = require('crypto');
 
 class UserController extends Controller {
+  // 生成简单的 token
+  generateToken(userId) {
+    const timestamp = Date.now();
+    const randomBytes = crypto.randomBytes(16).toString('hex');
+    const payload = `${userId}_${timestamp}_${randomBytes}`;
+    return Buffer.from(payload).toString('base64');
+  }
+
+  // 验证 token（可选，用于需要验证 token 的接口）
+  verifyToken(token) {
+    try {
+      const decoded = Buffer.from(token, 'base64').toString('utf8');
+      const parts = decoded.split('_');
+      if (parts.length !== 3) return null;
+      
+      const userId = parts[0];
+      const timestamp = parseInt(parts[1]);
+      
+      // 检查 token 是否过期（例如：7天）
+      const expireTime = 7 * 24 * 60 * 60 * 1000; // 7天
+      if (Date.now() - timestamp > expireTime) {
+        return null;
+      }
+      
+      return { userId, timestamp };
+    } catch (error) {
+      return null;
+    }
+  }
   async register() {
     const { ctx } = this;
     const { username, email, password, confirmPassword } = ctx.request.body;
@@ -41,9 +71,20 @@ class UserController extends Controller {
     const user = await ctx.service.user.verifyUser(email, password);
 
     if (user) {
+      // 生成简单的 token
+      const token = this.generateToken(user.id);
+      
+      // 保存 session
       ctx.session.user = user;
-      console.log({ code: 0, msg: 'Login success', data: user });
-      ctx.body = { code: 0, msg: 'Login success', data: user };
+      ctx.session.token = token;
+      
+      console.log({ code: 0, msg: 'Login success', data: user, token });
+      ctx.body = { 
+        code: 0, 
+        msg: 'Login success', 
+        data: user,
+        token: token
+      };
     } else {
       ctx.status = 401;
       ctx.body = { code: 401, msg: 'Invalid email or password' };

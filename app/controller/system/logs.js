@@ -5,7 +5,7 @@ class LogsController extends Controller {
     const { ctx } = this;
     try {
       const pageNum = parseInt(ctx.query.pageNum || '1', 10);
-      const pageSize = parseInt(ctx.query.pageSize || '50', 10);
+      const pageSize = parseInt(ctx.query.pageSize || '10', 10);
       const offset = (pageNum - 1) * pageSize;
       const where = {};
       const Op = ctx.app.Sequelize.Op;
