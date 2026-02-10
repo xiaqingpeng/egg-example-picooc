@@ -4,7 +4,7 @@
 OS_TYPE=$(uname -s)
 
 # 获取CPU使用率
-if [ "$OS_TYPE" = "Darwin" ]; then
+if [ "$OS_TYPE"="Darwin" ]; then
     # macOS
     cpu_usage=$(top -l 1 | grep "CPU usage" | awk -F'[^0-9.]+' '{print $2}')
 else
@@ -30,7 +30,7 @@ else
     mem_total=$(free -m | grep Mem | awk '{print $2}')
     mem_used=$(free -m | grep Mem | awk '{print $3}')
 fi
-mem_usage=$(echo "scale=2; $mem_used / $mem_total * 100" | bc -l 2>/dev/null || awk "BEGIN {printf \"%.2f\", $mem_used / $mem_total * 100}")
+mem_usage=$(awk "BEGIN {printf \"%.2f\", $mem_used / $mem_total * 100}" <<< "$mem_used $mem_total")
 
 # 获取磁盘使用情况（根目录）
 if [ "$OS_TYPE" = "Darwin" ]; then
@@ -42,7 +42,7 @@ else
     disk_total=$(df -BG / | grep / | awk '{print $2}' | sed 's/G//')
     disk_used=$(df -BG / | grep / | awk '{print $3}' | sed 's/G//')
 fi
-disk_usage=$(echo "scale=2; $disk_used / $disk_total * 100" | bc 2>/dev/null || awk "BEGIN {printf \"%.2f\", $disk_used / $disk_total * 100}")
+disk_usage=$(awk "BEGIN {printf \"%.2f\", $disk_used / $disk_total * 100}" <<< "$disk_used $disk_total")
 
 # 获取系统负载
 if [ "$OS_TYPE" = "Darwin" ]; then
@@ -122,8 +122,8 @@ rx_bytes=${rx_bytes:-0}
 tx_bytes=${tx_bytes:-0}
 
 # 转换为MB
-rx_mb=$(echo "scale=2; $rx_bytes / 1024 / 1024" | bc 2>/dev/null || awk "BEGIN {printf \"%.2f\", $rx_bytes / 1024 / 1024}")
-tx_mb=$(echo "scale=2; $tx_bytes / 1024 / 1024" | bc 2>/dev/null || awk "BEGIN {printf \"%.2f\", $tx_bytes / 1024 / 1024}")
+rx_mb=$(awk "BEGIN {printf \"%.2f\", $rx_bytes / 1024 / 1024}" <<< "$rx_bytes")
+tx_mb=$(awk "BEGIN {printf \"%.2f\", $tx_bytes / 1024 / 1024}" <<< "$tx_bytes")
 
 # 输出JSON格式数据
 echo "{
