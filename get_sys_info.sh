@@ -70,14 +70,19 @@ if echo "$uptime_str" | grep -q "days"; then
     # 包含days的格式
     days=$(echo "$uptime_str" | awk '{print $3}')
     time_part=$(echo "$uptime_str" | awk '{print $5}' | sed 's/,//')
-    hours=$(echo $time_part | cut -d: -f1)
-    minutes=$(echo $time_part | cut -d: -f2)
+    hours=$(echo "$time_part" | cut -d: -f1)
+    minutes=$(echo "$time_part" | cut -d: -f2)
 else
     # 不包含days的格式
     time_part=$(echo "$uptime_str" | awk '{print $3}' | sed 's/,//')
-    hours=$(echo $time_part | cut -d: -f1)
-    minutes=$(echo $time_part | cut -d: -f2)
+    hours=$(echo "$time_part" | cut -d: -f1)
+    minutes=$(echo "$time_part" | cut -d: -f2)
 fi
+
+# 确保变量有值（防止空值导致计算错误）
+days=${days:-0}
+hours=${hours:-0}
+minutes=${minutes:-0}
 
 # 计算总小时数（包括分钟转换为小数）
 total_hours=$(awk "BEGIN {print $hours + $minutes / 60}" <<< "$hours $minutes")
