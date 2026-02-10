@@ -8,6 +8,7 @@
 - [快速开始](#快速开始)
 - [核心功能](#核心功能)
 - [API 接口文档](#api-接口文档)
+- [完整路由配置](#完整路由配置)
 - [数据库设计](#数据库设计)
 - [配置说明](#配置说明)
 - [部署指南](#部署指南)
@@ -19,15 +20,18 @@
 
 ## 项目概述
 
-本项目是基于 Egg.js 框架开发的埋点事件收集和分析系统，用于接收、存储和分析前端应用（如 Qt 应用）上报的用户行为数据。
+本项目是基于 Egg.js 框架开发的综合性后端系统，包含埋点事件收集和分析、用户管理、系统监控、文件上传等功能。
 
 ### 主要特性
 
 ✅ **高性能** - 基于 Egg.js 企业级框架，支持高并发请求
 ✅ **易扩展** - 模块化设计，易于添加新功能
-✅ **数据持久化** - 支持 MySQL 数据库存储
+✅ **数据持久化** - 支持 PostgreSQL 数据库存储
 ✅ **批量处理** - 支持单个和批量事件上报
-✅ **统计分析** - 提供事件统计和趋势分析
+✅ **统计分析** - 提供事件统计、趋势分析、用户画像
+✅ **用户管理** - 完整的用户注册、登录、信息管理功能
+✅ **文件上传** - 支持图片和文件上传到OSS
+✅ **系统监控** - 实时系统信息、日志统计
 ✅ **完整日志** - 详细的请求日志和错误追踪
 ✅ **CORS 支持** - 支持跨域请求
 ✅ **安全可靠** - 完善的错误处理和数据验证
@@ -38,6 +42,7 @@
 - **数据库**: PostgreSQL 12+
 - **ORM**: egg-sequelize
 - **跨域**: egg-cors
+- **文件存储**: 阿里云OSS
 - **Node.js**: 16.0+
 
 ---
@@ -48,26 +53,61 @@
 egg-analytics/
 ├── app/
 │   ├── controller/
-│   │   └── analytics.js          # 埋点事件控制器
+│   │   ├── analytics.js          # 埋点事件控制器
+│   │   ├── home.js               # 首页控制器
+│   │   ├── user.js               # 用户管理控制器
+│   │   ├── userProfile.js        # 用户画像控制器
+│   │   ├── oss2.js               # 文件上传控制器
+│   │   └── system/               # 系统相关控制器
+│   │       ├── notice.js         # 通知控制器
+│   │       ├── noticeDb.js       # 数据库通知控制器
+│   │       └── logs.js           # 日志控制器
 │   ├── service/
-│   │   └── analytics.js          # 埋点业务逻辑服务
+│   │   ├── analytics.js          # 埋点业务逻辑服务
+│   │   ├── user.js               # 用户业务逻辑服务
+│   │   ├── userProfile.js        # 用户画像业务逻辑服务
+│   │   ├── oss2.js               # 文件上传业务逻辑服务
+│   │   ├── notice.js             # 通知业务逻辑服务
+│   │   └── noticeDb.js           # 数据库通知业务逻辑服务
+│   ├── model/
+│   │   ├── analytics_event.js    # 埋点事件模型
+│   │   ├── user.js               # 用户模型
+│   │   ├── user_profile.js       # 用户画像模型
+│   │   ├── api_log.js            # API日志模型
+│   │   └── notice.js             # 通知模型
 │   ├── middleware/
-│   │   └── request_logger.js     # 请求日志中间件
-│   └── router.js                  # 路由配置
+│   │   └── requestLog.js         # 请求日志中间件
+│   ├── schedule/
+│   │   └── updateUserProfile.js  # 用户画像更新定时任务
+│   └── router.js                 # 路由配置
 ├── config/
-│   ├── config.default.js          # 默认配置
-│   ├── config.prod.js             # 生产环境配置
-│   ├── plugin.js                  # 插件配置
-│   └── database.js                # 数据库配置
+│   ├── config.default.js         # 默认配置
+│   ├── config.prod.js            # 生产环境配置
+│   ├── config.dotenv.js          # 环境变量配置
+│   └── plugin.js                 # 插件配置
 ├── database/
 │   └── migrations/
-│       └── init.sql               # 数据库初始化脚本
-├── logs/                          # 日志目录
-│   └── analytics/                 # 埋点事件日志
-├── test/                          # 测试目录
+│       ├── README.md             # 数据库迁移说明
+│       ├── init_database.sql     # 数据库初始化脚本
+│       └── optimize_database.sql  # 数据库优化脚本
+├── docs/
+│   └── analytics-trends-api.md   # 趋势分析API文档
+├── logs/                         # 日志目录
+├── test/
+│   └── app/
+│       └── controller/           # 测试目录
+├── .github/
+│   └── workflows/
+│       └── cicd.yml              # GitHub Actions CI/CD配置
+├── .gitee/
+│   └── workflows/
+│       └── cicd.yml              # Gitee CI/CD配置
 ├── .gitignore
-├── app.js                         # 应用入口
-├── package.json                   # 项目依赖
+├── .eslintrc
+├── .eslintignore
+├── app.js                        # 应用入口
+├── package.json                  # 项目依赖
+├── ecosystem.config.js           # PM2配置
 └── README.md
 ```
 
@@ -387,6 +427,171 @@ curl "http://120.48.95.51:7001/api/analytics/events?page=1&pageSize=20&eventType
   }
 }
 ```
+
+---
+
+## 完整路由配置
+
+以下为系统中所有可用的API接口，按功能模块分类：
+
+### 基础接口
+
+| 方法 | 路径 | 说明 | 控制器 |
+|------|------|------|--------|
+| GET | `/` | 首页 | controller.home.index |
+| GET | `/health` | 健康检查，不依赖数据库 | controller.home.health |
+| GET | `/test-cicd` | 测试路由，用于验证CI/CD自动部署功能 | controller.home.testCicd |
+| GET | `/system/info` | 获取系统信息 | controller.home.getSystemInfo |
+
+### 系统通知接口
+
+| 方法 | 路径 | 说明 | 控制器 |
+|------|------|------|--------|
+| GET | `/system/notice/list` | 获取通知列表 | controller.system.notice.list |
+| GET | `/system/notice/db/list` | 获取数据库通知列表 | controller.system.noticeDb.list |
+| GET | `/system/notice/:id` | 获取通知详情 | controller.system.noticeDb.detail |
+| POST | `/system/notice` | 创建通知 | controller.system.noticeDb.create |
+| PUT | `/system/notice/:id` | 更新通知 | controller.system.noticeDb.update |
+| DELETE | `/system/notice/:id` | 删除通知 | controller.system.noticeDb.destroy |
+
+### 系统日志接口
+
+| 方法 | 路径 | 说明 | 控制器 |
+|------|------|------|--------|
+| GET | `/system/logs/stats` | 获取日志统计 | controller.system.logs.stats |
+| POST | `/system/logs/report` | 上报日志 | controller.system.logs.report |
+
+### 用户认证接口
+
+| 方法 | 路径 | 说明 | 控制器 | 需要认证 |
+|------|------|------|--------|----------|
+| POST | `/register` | 用户注册 | controller.user.register | 否 |
+| POST | `/login` | 用户登录 | controller.user.login | 否 |
+
+### 用户管理接口
+
+| 方法 | 路径 | 说明 | 控制器 | 需要认证 |
+|------|------|------|--------|----------|
+| GET | `/user/info` | 获取当前登录用户信息 | controller.user.getUserInfo | 是 |
+| GET | `/user` | 根据用户ID查询用户信息（无需登录验证） | controller.user.getUserById | 否 |
+| POST | `/user/change-password` | 修改密码 | controller.user.changePassword | 是 |
+| POST | `/user/avatar` | 上传头像 | controller.user.uploadAvatar | 是 |
+| PUT | `/user/info` | 更新用户信息（支持任意字段组合） | controller.user.updateUserInfo | 是 |
+
+**更新用户信息接口说明**：
+
+- **接口地址**: `PUT /user/info`
+- **需要认证**: 是
+- **请求参数**:
+
+| 参数名 | 类型 | 必填 | 说明 |
+|--------|------|------|------|
+| id | number | 否 | 要更新的用户ID，不传则更新当前登录用户 |
+| username | string | 否 | 用户名（1-64字符） |
+| email | string | 否 | 邮箱地址（需符合邮箱格式，1-128字符） |
+| password | string | 否 | 密码（6-128字符） |
+| avatar | string | 否 | 头像URL（最多512字符） |
+
+- **请求示例**:
+
+```bash
+# 更新用户名
+curl -X PUT http://120.48.95.51:7001/user/info \
+  -H "Content-Type: application/json" \
+  -b cookies.txt \
+  -d '{
+    "username": "newusername"
+  }'
+
+# 更新邮箱和密码
+curl -X PUT http://120.48.95.51:7001/user/info \
+  -H "Content-Type: application/json" \
+  -b cookies.txt \
+  -d '{
+    "email": "newemail@example.com",
+    "password": "newpassword123"
+  }'
+
+# 更新指定用户的所有信息
+curl -X PUT http://120.48.95.51:7001/user/info \
+  -H "Content-Type: application/json" \
+  -b cookies.txt \
+  -d '{
+    "id": 123,
+    "username": "username",
+    "email": "email@example.com",
+    "password": "password123",
+    "avatar": "http://example.com/avatar.jpg"
+  }'
+```
+
+- **响应示例**:
+
+```json
+{
+  "code": 0,
+  "msg": "User info updated successfully",
+  "data": {
+    "id": 1,
+    "username": "newusername",
+    "email": "newemail@example.com",
+    "avatar": "http://example.com/avatar.jpg",
+    "created_at": "2024-01-01T00:00:00.000Z",
+    "updated_at": "2024-01-02T00:00:00.000Z"
+  }
+}
+```
+
+### 文件上传接口
+
+| 方法 | 路径 | 说明 | 控制器 | 需要认证 |
+|------|------|------|--------|----------|
+| POST | `/api/upload/image` | 上传图片 | controller.oss2.upLoadImage | 是 |
+| POST | `/api/upload/file` | 上传文件 | controller.oss2.upLoadFile | 是 |
+
+### 埋点事件接口
+
+| 方法 | 路径 | 说明 | 控制器 |
+|------|------|------|--------|
+| POST | `/api/analytics/events` | 接收单个事件 | controller.analytics.events |
+| POST | `/api/analytics/events/batch` | 批量接收事件 | controller.analytics.batchEvents |
+| GET | `/api/analytics/stats` | 查询事件统计 | controller.analytics.stats |
+| GET | `/api/analytics/events` | 查询事件列表 | controller.analytics.getEvents |
+
+### 统计分析API
+
+| 方法 | 路径 | 说明 | 控制器 |
+|------|------|------|--------|
+| GET | `/api/analytics/activity` | 用户活跃度统计（DAU/MAU） | controller.analytics.getActivityStats |
+| GET | `/api/analytics/retention` | 留存率统计 | controller.analytics.getRetentionStats |
+| GET | `/api/analytics/page-views` | 页面访问统计 | controller.analytics.getPageViewStats |
+| GET | `/api/analytics/event-stats` | 事件统计 | controller.analytics.getEventStats |
+| GET | `/api/analytics/trends` | 趋势分析 | controller.analytics.getTrendAnalysis |
+
+### 用户画像API - 原有路径
+
+| 方法 | 路径 | 说明 | 控制器 |
+|------|------|------|--------|
+| GET | `/api/user-profile` | 获取用户完整画像 | controller.userProfile.getUserProfile |
+| GET | `/api/user-profile/tags` | 获取用户标签 | controller.userProfile.getUserTags |
+| GET | `/api/user-profile/behavior` | 获取用户行为特征 | controller.userProfile.getUserBehaviorFeatures |
+| GET | `/api/user-profile/interest` | 获取用户兴趣画像 | controller.userProfile.getUserInterestProfile |
+| GET | `/api/user-profile/value` | 获取用户价值评估 | controller.userProfile.getUserValueAssessment |
+| GET | `/api/user-profile/list` | 获取用户列表 | controller.userProfile.getUserList |
+| GET | `/api/analytics/users` | 获取用户列表（兼容路径） | controller.userProfile.getUserList |
+| PUT | `/api/user-profile/:userId` | 更新单个用户画像 | controller.userProfile.updateUserProfile |
+| POST | `/api/user-profile/update-all` | 批量更新用户画像 | controller.userProfile.updateAllUserProfiles |
+
+### 用户画像API - 兼容前端路径
+
+| 方法 | 路径 | 说明 | 控制器 |
+|------|------|------|--------|
+| GET | `/api/analytics/user/profile` | 获取用户完整画像（兼容） | controller.userProfile.getUserProfile |
+| GET | `/api/analytics/user/tags` | 获取用户标签（兼容） | controller.userProfile.getUserTags |
+| GET | `/api/analytics/user/behavior` | 获取用户行为特征（兼容） | controller.userProfile.getUserBehaviorFeatures |
+| GET | `/api/analytics/user/interest` | 获取用户兴趣画像（兼容） | controller.userProfile.getUserInterestProfile |
+| GET | `/api/analytics/user/value` | 获取用户价值评估（兼容） | controller.userProfile.getUserValueAssessment |
+| GET | `/api/analytics/user/list` | 获取用户列表（兼容） | controller.userProfile.getUserList |
 
 ---
 

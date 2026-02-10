@@ -104,13 +104,29 @@ class UserService extends Service {
     }
 
     // 允许更新的字段
-    const allowedFields = ['username', 'avatar'];
+    const allowedFields = ['username', 'email', 'password', 'avatar'];
     const updateData = {};
 
     // 过滤并构建更新数据
     for (const field of allowedFields) {
       if (updates[field] !== undefined) {
-        updateData[field] = updates[field];
+        // 如果更新 email，检查是否已被其他用户使用
+        if (field === 'email') {
+          const existingUser = await ctx.model.User.findOne({
+            where: { email: updates[field] }
+          });
+          if (existingUser && existingUser.id !== userId) {
+            const error = new Error('Email already exists');
+            error.status = 400;
+            throw error;
+          }
+        }
+        // 如果更新 password，需要加密
+        if (field === 'password') {
+          updateData[field] = this.hashPassword(updates[field]);
+        } else {
+          updateData[field] = updates[field];
+        }
       }
     }
 

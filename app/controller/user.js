@@ -288,16 +288,24 @@ class UserController extends Controller {
 
   async updateUserInfo() {
     const { ctx } = this;
-    const { username } = ctx.request.body;
+    const { id, username, email, password, avatar } = ctx.request.body;
 
-    // 检查用户是否已登录
     if (!ctx.session.user) {
       ctx.status = 401;
       ctx.body = { code: 401, msg: 'Not logged in' };
       return;
     }
 
-    // 验证用户名
+    const targetUserId = id || ctx.session.user.id;
+
+    if (id !== undefined) {
+      if (!id || isNaN(id) || parseInt(id) <= 0) {
+        ctx.status = 422;
+        ctx.body = { code: 422, msg: 'Invalid user ID' };
+        return;
+      }
+    }
+
     if (username !== undefined) {
       if (!username || username.trim().length === 0) {
         ctx.status = 422;
@@ -311,12 +319,63 @@ class UserController extends Controller {
       }
     }
 
-    try {
-      // 更新用户信息
-      const user = await ctx.service.user.updateUser(ctx.session.user.id, { username });
+    if (email !== undefined) {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!email || email.trim().length === 0) {
+        ctx.status = 422;
+        ctx.body = { code: 422, msg: 'Email cannot be empty' };
+        return;
+      }
+      if (!emailRegex.test(email)) {
+        ctx.status = 422;
+        ctx.body = { code: 422, msg: 'Invalid email format' };
+        return;
+      }
+      if (email.length > 128) {
+        ctx.status = 422;
+        ctx.body = { code: 422, msg: 'Email cannot exceed 128 characters' };
+        return;
+      }
+    }
 
-      // 更新session中的用户信息
-      ctx.session.user = user;
+    if (password !== undefined) {
+      if (!password || password.trim().length === 0) {
+        ctx.status = 422;
+        ctx.body = { code: 422, msg: 'Password cannot be empty' };
+        return;
+      }
+      if (password.length < 6) {
+        ctx.status = 422;
+        ctx.body = { code: 422, msg: 'Password must be at least 6 characters' };
+        return;
+      }
+      if (password.length > 128) {
+        ctx.status = 422;
+        ctx.body = { code: 422, msg: 'Password cannot exceed 128 characters' };
+        return;
+      }
+    }
+
+    if (avatar !== undefined && avatar !== null) {
+      if (avatar.length > 512) {
+        ctx.status = 422;
+        ctx.body = { code: 422, msg: 'Avatar URL cannot exceed 512 characters' };
+        return;
+      }
+    }
+
+    const updateData = {};
+    if (username !== undefined) updateData.username = username;
+    if (email !== undefined) updateData.email = email;
+    if (password !== undefined) updateData.password = password;
+    if (avatar !== undefined) updateData.avatar = avatar;
+
+    try {
+      const user = await ctx.service.user.updateUser(targetUserId, updateData);
+
+      if (targetUserId === ctx.session.user.id) {
+        ctx.session.user = user;
+      }
 
       ctx.body = { code: 0, msg: 'User info updated successfully', data: user };
     } catch (error) {
