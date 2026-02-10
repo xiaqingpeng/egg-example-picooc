@@ -298,15 +298,15 @@ class UserController extends Controller {
 
     const targetUserId = id || ctx.session.user.id;
 
-    if (id !== undefined) {
-      if (!id || isNaN(id) || parseInt(id) <= 0) {
+    if (id !== undefined && id !== null && id !== '') {
+      if (isNaN(id) || parseInt(id) <= 0) {
         ctx.status = 422;
         ctx.body = { code: 422, msg: 'Invalid user ID' };
         return;
       }
     }
 
-    if (username !== undefined) {
+    if (username !== undefined && username !== null) {
       if (!username || username.trim().length === 0) {
         ctx.status = 422;
         ctx.body = { code: 422, msg: 'Username cannot be empty' };
@@ -319,7 +319,7 @@ class UserController extends Controller {
       }
     }
 
-    if (email !== undefined) {
+    if (email !== undefined && email !== null) {
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!email || email.trim().length === 0) {
         ctx.status = 422;
@@ -338,7 +338,7 @@ class UserController extends Controller {
       }
     }
 
-    if (password !== undefined) {
+    if (password !== undefined && password !== null) {
       if (!password || password.trim().length === 0) {
         ctx.status = 422;
         ctx.body = { code: 422, msg: 'Password cannot be empty' };
@@ -365,10 +365,10 @@ class UserController extends Controller {
     }
 
     const updateData = {};
-    if (username !== undefined) updateData.username = username;
-    if (email !== undefined) updateData.email = email;
-    if (password !== undefined) updateData.password = password;
-    if (avatar !== undefined) updateData.avatar = avatar;
+    if (username !== undefined && username !== null) updateData.username = username;
+    if (email !== undefined && email !== null) updateData.email = email;
+    if (password !== undefined && password !== null) updateData.password = password;
+    if (avatar !== undefined && avatar !== null) updateData.avatar = avatar;
 
     try {
       const user = await ctx.service.user.updateUser(targetUserId, updateData);
