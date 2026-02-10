@@ -1,8 +1,9 @@
 #!/bin/bash
 
 # 测试更新用户信息接口 - 改进版
-# Base URL
+# Base URL (默认使用本地服务器，如需测试远程服务器请修改为远程地址)
 BASE_URL="http://localhost:7001"
+# BASE_URL="http://120.48.95.51:7001"  # 远程服务器地址
 
 # 颜色输出
 RED='\033[0;31m'
