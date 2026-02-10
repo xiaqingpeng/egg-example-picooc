@@ -79,11 +79,11 @@ else
     minutes=$(echo $time_part | cut -d: -f2)
 fi
 
-# 计算总小时数（包括分钟）
-total_hours=$(echo "$hours + $minutes / 60" | bc -l 2>/dev/null || awk "BEGIN {print $hours + $minutes / 60}")
+# 计算总小时数（包括分钟转换为小数）
+total_hours=$(awk "BEGIN {print $hours + $minutes / 60}" <<< "$hours $minutes")
 
 # 计算总天数（包括小时转换为小数天数）
-total_days=$(echo "$days + $total_hours / 24" | bc -l 2>/dev/null || awk "BEGIN {printf \"%.2f\", $days + $total_hours / 24}")
+total_days=$(awk "BEGIN {printf \"%.2f\", $days + ($hours + $minutes / 60) / 24}" <<< "$days $hours $minutes")
 
 # 将总天数限制为2位小数
 total_days=$(echo "scale=2; $total_days / 1" | bc -l 2>/dev/null || awk "BEGIN {printf \"%.2f\", $total_days}")
