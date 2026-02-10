@@ -88,7 +88,7 @@ minutes=${minutes:-0}
 total_hours=$(awk "BEGIN {print $hours + $minutes / 60}" <<< "$hours $minutes")
 
 # 计算总天数（包括小时转换为小数天数）
-total_days=$(awk "BEGIN {printf \"%.2f\", $days + ($hours + $minutes / 60) / 24}" <<< "$days $hours $minutes")
+total_days=$(awk "BEGIN {val = $days + ($hours + $minutes / 60) / 24; printf \"%.2f\", val}" <<< "$days $hours $minutes")
 
 # 将总天数限制为2位小数
 total_days=$(echo "scale=2; $total_days / 1" | bc -l 2>/dev/null || awk "BEGIN {printf \"%.2f\", $total_days}")
@@ -130,6 +130,15 @@ tx_bytes=${tx_bytes:-0}
 rx_mb=$(awk "BEGIN {printf \"%.2f\", $rx_bytes / 1024 / 1024}" <<< "$rx_bytes")
 tx_mb=$(awk "BEGIN {printf \"%.2f\", $tx_bytes / 1024 / 1024}" <<< "$tx_bytes")
 
+# 格式化总天数，确保有前导零
+formatted_uptime_days=$(awk -v days="$total_days" 'BEGIN {
+    if (days < 1) {
+        printf "0%.2f", days
+    } else {
+        printf "%.2f", days
+    }
+}')
+
 # 输出JSON格式数据
 echo "{
     \"cpu_usage\": $cpu_usage,
@@ -142,7 +151,7 @@ echo "{
     \"load_1\": $load_1,
     \"load_5\": $load_5,
     \"load_15\": $load_15,
-    \"uptime_days\": $total_days,
+    \"uptime_days\": $formatted_uptime_days,
     \"network_interface\": \"$NETWORK_INTERFACE\",
     \"network_rx_bytes\": $rx_bytes,
     \"network_tx_bytes\": $tx_bytes,
