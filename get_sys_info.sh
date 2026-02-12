@@ -87,11 +87,18 @@ minutes=${minutes:-0}
 # 计算总小时数（包括分钟转换为小数）
 total_hours=$(awk "BEGIN {print $hours + $minutes / 60}" <<< "$hours $minutes")
 
-# 计算总天数（包括小时转换为小数天数）
-total_days=$(awk "BEGIN {val = $days + ($hours + $minutes / 60) / 24; printf \"%.2f\", val}" <<< "$days $hours $minutes")
-
-# 将总天数限制为2位小数
-total_days=$(echo "scale=2; $total_days / 1" | bc -l 2>/dev/null || awk "BEGIN {printf \"%.2f\", $total_days}")
+# 计算总天数（包括小时转换为小数天数），直接使用awk确保格式正确
+total_days=$(awk -v d="$days" -v h="$hours" -v m="$minutes" 'BEGIN {
+    val = d + (h + m / 60) / 24
+    # 确保值有效
+    if (val < 0 || val != val) val = 0
+    # 格式化：如果小于1，确保有前导零
+    if (val < 1 && val > 0) {
+        printf "0%.2f", val
+    } else {
+        printf "%.2f", val
+    }
+}')
 
 # 确保总天数有值
 total_days=${total_days:-0}
@@ -130,31 +137,65 @@ tx_bytes=${tx_bytes:-0}
 rx_mb=$(awk "BEGIN {printf \"%.2f\", $rx_bytes / 1024 / 1024}" <<< "$rx_bytes")
 tx_mb=$(awk "BEGIN {printf \"%.2f\", $tx_bytes / 1024 / 1024}" <<< "$tx_bytes")
 
-# 格式化总天数，确保有前导零
-formatted_uptime_days=$(awk -v days="$total_days" 'BEGIN {
-    if (days < 1) {
-        printf "0%.2f", days
-    } else {
-        printf "%.2f", days
-    }
-}')
+# 格式化数值函数：确保小于1的数字有前导零
+format_number() {
+    local num="$1"
+    # 如果数字为空或无效，返回0
+    if [ -z "$num" ] || [ "$num" = "" ]; then
+        echo "0"
+        return
+    fi
+    # 使用awk确保数字格式正确
+    awk -v n="$num" 'BEGIN {
+        # 转换为数字
+        val = n + 0
+        # 如果是负数或无效值，设为0
+        if (val < 0 || val != val) val = 0
+        # 如果小于1，确保有前导零
+        if (val < 1 && val > 0) {
+            printf "0%.2f", val
+        } else {
+            printf "%.2f", val
+        }
+    }'
+}
+
+# 格式化所有数值，确保JSON有效
+formatted_cpu_usage=$(format_number "$cpu_usage")
+formatted_mem_usage=$(format_number "$mem_usage")
+formatted_disk_usage=$(format_number "$disk_usage")
+formatted_load_1=$(format_number "$load_1")
+formatted_load_5=$(format_number "$load_5")
+formatted_load_15=$(format_number "$load_15")
+formatted_uptime_days=$(format_number "$total_days")
+formatted_network_rx_mb=$(format_number "$rx_mb")
+formatted_network_tx_mb=$(format_number "$tx_mb")
+
+# 确保整数变量有默认值
+mem_total=${mem_total:-0}
+mem_used=${mem_used:-0}
+disk_total=${disk_total:-0}
+disk_used=${disk_used:-0}
+rx_bytes=${rx_bytes:-0}
+tx_bytes=${tx_bytes:-0}
+NETWORK_INTERFACE=${NETWORK_INTERFACE:-""}
 
 # 输出JSON格式数据
 echo "{
-    \"cpu_usage\": $cpu_usage,
+    \"cpu_usage\": $formatted_cpu_usage,
     \"mem_total\": $mem_total,
     \"mem_used\": $mem_used,
-    \"mem_usage\": $mem_usage,
+    \"mem_usage\": $formatted_mem_usage,
     \"disk_total\": $disk_total,
     \"disk_used\": $disk_used,
-    \"disk_usage\": $disk_usage,
-    \"load_1\": $load_1,
-    \"load_5\": $load_5,
-    \"load_15\": $load_15,
+    \"disk_usage\": $formatted_disk_usage,
+    \"load_1\": $formatted_load_1,
+    \"load_5\": $formatted_load_5,
+    \"load_15\": $formatted_load_15,
     \"uptime_days\": $formatted_uptime_days,
     \"network_interface\": \"$NETWORK_INTERFACE\",
     \"network_rx_bytes\": $rx_bytes,
     \"network_tx_bytes\": $tx_bytes,
-    \"network_rx_mb\": $rx_mb,
-    \"network_tx_mb\": $tx_mb
+    \"network_rx_mb\": $formatted_network_rx_mb,
+    \"network_tx_mb\": $formatted_network_tx_mb
 }"

@@ -4,6 +4,32 @@ const Service = require('egg').Service;
 
 class AnalyticsService extends Service {
   /**
+   * 规范化 userId
+   * 如果 userId 是纯数字（可能是时间戳），转换为匿名用户格式
+   * @param {string|number} userId - 原始用户ID
+   * @returns {string|null} 规范化后的用户ID
+   */
+  normalizeUserId(userId) {
+    if (!userId) return null;
+    
+    const userIdStr = String(userId).trim();
+    
+    // 如果已经是匿名用户格式，直接返回
+    if (userIdStr.startsWith('anonymous_')) {
+      return userIdStr;
+    }
+    
+    // 如果是纯数字且长度超过10位（可能是时间戳），转换为匿名用户格式
+    if (/^\d{10,}$/.test(userIdStr)) {
+      this.ctx.logger.warn(`Detected timestamp-like userId: ${userIdStr}, converting to anonymous format`);
+      return `anonymous_${userIdStr}`;
+    }
+    
+    // 其他情况直接返回
+    return userIdStr;
+  }
+
+  /**
    * 保存单个埋点事件
    * @param {Object} eventData - 事件数据
    * @returns {Promise<Object>} 保存的事件对象
@@ -14,12 +40,15 @@ class AnalyticsService extends Service {
     // 生成请求ID
     const requestId = ctx.requestId || this.generateRequestId();
 
+    // 规范化 userId
+    const normalizedUserId = this.normalizeUserId(eventData.userId);
+
     // 构建保存数据
     const data = {
       eventName: eventData.event,
       eventType: eventData.eventType || 'custom',
       properties: eventData.properties ? JSON.stringify(eventData.properties) : null,
-      userId: eventData.userId || null,
+      userId: normalizedUserId,
       sessionId: eventData.sessionId || null,
       duration: eventData.duration || null,
       errorMessage: eventData.errorMessage || null,
@@ -47,13 +76,13 @@ class AnalyticsService extends Service {
   async saveBatchEvents(events) {
     const { ctx } = this;
     const requestId = ctx.requestId || this.generateRequestId();
-
-    // 构建批量数据
+    
+    // 构建批量数据，同时规范化 userId
     const batchData = events.map(event => ({
       eventName: event.event,
       eventType: event.eventType || 'custom',
       properties: event.properties ? JSON.stringify(event.properties) : null,
-      userId: event.userId || null,
+      userId: this.normalizeUserId(event.userId),
       sessionId: event.sessionId || null,
       duration: event.duration || null,
       errorMessage: event.errorMessage || null,
