@@ -137,7 +137,7 @@ tx_bytes=${tx_bytes:-0}
 rx_mb=$(awk "BEGIN {printf \"%.2f\", $rx_bytes / 1024 / 1024}" <<< "$rx_bytes")
 tx_mb=$(awk "BEGIN {printf \"%.2f\", $tx_bytes / 1024 / 1024}" <<< "$tx_bytes")
 
-# 格式化数值函数：确保小于1的数字有前导零
+# 格式化数值函数：确保小于1的数字有前导零，且格式符合JSON规范
 format_number() {
     local num="$1"
     # 如果数字为空或无效，返回0
@@ -145,18 +145,28 @@ format_number() {
         echo "0"
         return
     fi
+    # 先清理输入：移除前导零（但保留小数点前的单个0）
+    # 例如：00.21 -> 0.21, 0.21 -> 0.21, .21 -> 0.21
+    local cleaned_num=$(echo "$num" | sed 's/^00*\./0./' | sed 's/^\./0./')
+    
     # 使用awk确保数字格式正确
-    awk -v n="$num" 'BEGIN {
+    awk -v n="$cleaned_num" 'BEGIN {
         # 转换为数字
         val = n + 0
         # 如果是负数或无效值，设为0
         if (val < 0 || val != val) val = 0
-        # 如果小于1，确保有前导零
-        if (val < 1 && val > 0) {
-            printf "0%.2f", val
-        } else {
-            printf "%.2f", val
+        # 格式化数字为两位小数
+        formatted = sprintf("%.2f", val)
+        # 如果格式化后的数字以点开头（如 .21），在前面添加0
+        if (formatted ~ /^\./) {
+            formatted = "0" formatted
         }
+        # 确保输出符合JSON规范（不能是 00.xx 格式）
+        if (formatted ~ /^00+\./) {
+            # 去掉多余的前导零，只保留一个
+            sub(/^0+/, "0", formatted)
+        }
+        printf "%s", formatted
     }'
 }
 
