@@ -4,7 +4,7 @@
 OS_TYPE=$(uname -s)
 
 # 获取CPU使用率
-if [ "$OS_TYPE"="Darwin" ]; then
+if [ "$OS_TYPE" = "Darwin" ]; then
     # macOS
     cpu_usage=$(top -l 1 | grep "CPU usage" | awk -F'[^0-9.]+' '{print $2}')
 else
@@ -87,17 +87,12 @@ minutes=${minutes:-0}
 # 计算总小时数（包括分钟转换为小数）
 total_hours=$(awk "BEGIN {print $hours + $minutes / 60}" <<< "$hours $minutes")
 
-# 计算总天数（包括小时转换为小数天数），直接使用awk确保格式正确
+# 计算总天数（包括小时转换为小数天数）
+# 注意：这里不做字符串格式化（避免产生 00.xx 之类的非法JSON数字），统一交给 format_number 处理
 total_days=$(awk -v d="$days" -v h="$hours" -v m="$minutes" 'BEGIN {
     val = d + (h + m / 60) / 24
-    # 确保值有效
     if (val < 0 || val != val) val = 0
-    # 格式化：如果小于1，确保有前导零
-    if (val < 1 && val > 0) {
-        printf "0%.2f", val
-    } else {
-        printf "%.2f", val
-    }
+    printf "%.6f", val
 }')
 
 # 确保总天数有值
