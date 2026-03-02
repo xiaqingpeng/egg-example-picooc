@@ -110,16 +110,9 @@ class UserService extends Service {
     // 过滤并构建更新数据
     for (const field of allowedFields) {
       if (updates[field] !== undefined) {
-        // 如果更新 email，检查是否已被其他用户使用
+        // 直接更新邮箱，允许覆盖已存在的邮箱
         if (field === 'email') {
-          const existingUser = await ctx.model.User.findOne({
-            where: { email: updates[field] }
-          });
-          if (existingUser && existingUser.id !== userId) {
-            const error = new Error('Email already exists');
-            error.status = 400;
-            throw error;
-          }
+          // 移除邮箱重复检查，允许覆盖
         }
         // 如果更新 password，需要加密
         if (field === 'password') {
