@@ -10,18 +10,24 @@ class UserService extends Service {
 
     // Check if user exists
     const existingUser = await ctx.model.User.findOne({ where: { email } });
-    if (existingUser) {
-      const error = new Error('Email already exists');
-      error.status = 400;
-      throw error;
-    }
-
     const hashedPassword = this.hashPassword(password);
-    const user = await ctx.model.User.create({
-      username,
-      email,
-      password: hashedPassword,
-    });
+    let user;
+
+    if (existingUser) {
+      // Email exists, update the user
+      await existingUser.update({
+        username,
+        password: hashedPassword,
+      });
+      user = existingUser;
+    } else {
+      // Email doesn't exist, create new user
+      user = await ctx.model.User.create({
+        username,
+        email,
+        password: hashedPassword,
+      });
+    }
 
     // 从用户数据中排除password字段
     const userInfo = { ...user.toJSON() };
