@@ -34,6 +34,17 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     
+    - name: Debug Secrets
+      run: |
+        echo "Checking if secrets are set..."
+        if [ -n "${{ secrets.SERVER_HOST }}" ]; then echo "✓ SERVER_HOST is set"; else echo "✗ SERVER_HOST is NOT set"; fi
+        if [ -n "${{ secrets.SERVER_USERNAME }}" ]; then echo "✓ SERVER_USERNAME is set"; else echo "✗ SERVER_USERNAME is NOT set"; fi
+        if [ -n "${{ secrets.SERVER_SSH_KEY }}" ]; then echo "✓ SERVER_SSH_KEY is set (length: ${#SERVER_SSH_KEY})"; else echo "✗ SERVER_SSH_KEY is NOT set"; fi
+        echo "Host value: ${{ secrets.SERVER_HOST }}"
+        echo "Username value: ${{ secrets.SERVER_USERNAME }}"
+      env:
+        SERVER_SSH_KEY: ${{ secrets.SERVER_SSH_KEY }}
+    
     - name: Deploy to server
       uses: appleboy/ssh-action@v1.0.3
       with:
@@ -41,6 +52,7 @@ jobs:
         username: ${{ secrets.SERVER_USERNAME }}
         key: ${{ secrets.SERVER_SSH_KEY }}
         port: 22
+        debug: true
         script: |
           # 设置Node.js环境变量
           export PATH=/www/server/nodejs/v24.12.0/bin:$PATH
