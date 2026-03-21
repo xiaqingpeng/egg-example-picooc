@@ -84,6 +84,7 @@ module.exports = () => {
           requestTime: new Date(start),
           durationMs: duration,
           platform,
+          platformName: '',
         };
         // 使用setTimeout确保日志保存不会阻塞请求响应
         setTimeout(async () => {

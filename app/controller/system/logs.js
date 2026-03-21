@@ -102,6 +102,7 @@ class LogsController extends Controller {
         requestTime: body.requestTime ? new Date(String(body.requestTime)) : new Date(),
         durationMs: Math.max(0, Math.round(Number(body.durationMs || 0))),
         platform,
+        platformName: '',
       };
       const created = await ctx.model.ApiLog.create(data);
       ctx.body = { code: 0, msg: '', data: created };
