@@ -95,6 +95,21 @@ class LogsController extends Controller {
         else if (/Windows/i.test(ua)) platform = 'Windows';
         else platform = 'Web';
       }
+      
+      // 平台名称映射
+      const platformNameMap = {
+        Android: '谷歌Android',
+        iOS: '苹果iOS',
+        Harmony: '华为鸿蒙',
+        Windows: '微软Windows',
+        Mac: '苹果MacOS',
+        MacOS: '苹果MacOS',
+        Linux: '嵌入式Linux',
+        TV: 'Android TV',
+        MiniProgram: '微信小程序',
+        Web: 'Web网页',
+      };
+      const platformName = platformNameMap[platform] || platform || '';
       const data = {
         path: requestPath,
         method: String(body.method || ctx.method).toUpperCase(),
@@ -102,7 +117,7 @@ class LogsController extends Controller {
         requestTime: body.requestTime ? new Date(String(body.requestTime)) : new Date(),
         durationMs: Math.max(0, Math.round(Number(body.durationMs || 0))),
         platform,
-        platformName: '',
+        platformName,
       };
       const created = await ctx.model.ApiLog.create(data);
       ctx.body = { code: 0, msg: '', data: created };

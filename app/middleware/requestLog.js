@@ -71,6 +71,21 @@ module.exports = () => {
       else if (/Windows/i.test(ua)) platform = 'Windows';
       else platform = 'Web';
     }
+    
+    // 平台名称映射
+    const platformNameMap = {
+      Android: '谷歌Android',
+      iOS: '苹果iOS',
+      Harmony: '华为鸿蒙',
+      Windows: '微软Windows',
+      Mac: '苹果MacOS',
+      MacOS: '苹果MacOS',
+      Linux: '嵌入式Linux',
+      TV: 'Android TV',
+      MiniProgram: '微信小程序',
+      Web: 'Web网页',
+    };
+    const platformName = platformNameMap[platform] || platform || '';
     try {
       await next();
     } finally {
@@ -84,7 +99,7 @@ module.exports = () => {
           requestTime: new Date(start),
           durationMs: duration,
           platform,
-          platformName: '',
+          platformName,
         };
         // 使用setTimeout确保日志保存不会阻塞请求响应
         setTimeout(async () => {
