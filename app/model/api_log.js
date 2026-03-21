@@ -8,6 +8,7 @@ module.exports = app => {
     requestTime: { type: DATE, allowNull: false },
     durationMs: { type: INTEGER, allowNull: false, defaultValue: 0 },
     platform: { type: STRING(64), allowNull: false, defaultValue: '' },
+    platformName: { type: STRING(64), allowNull: false, defaultValue: '' },
   }, {
     tableName: 'system_api_log',
     timestamps: false,

@@ -74,6 +74,7 @@ COMMENT ON COLUMN "system_api_log".ip IS '客户端IP';
 COMMENT ON COLUMN "system_api_log".request_time IS '请求时间';
 COMMENT ON COLUMN "system_api_log".duration_ms IS '请求耗时（毫秒）';
 COMMENT ON COLUMN "system_api_log".platform IS '客户端平台';
+COMMENT ON COLUMN "system_api_log".platform_name IS '客户端平台名称（如：PC端、移动端等）';
 
 -- ============================================================================
 -- 第二部分：埋点分析表
