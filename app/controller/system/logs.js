@@ -38,18 +38,7 @@ class LogsController extends Controller {
       }
       const { rows, count } = await ctx.model.ApiLog.findAndCountAll({ where, offset, limit: pageSize, order: ctx.app.Sequelize.literal('id DESC') });
       const avgDurationMs = Number(await ctx.model.ApiLog.aggregate('durationMs', 'avg', { where })) || 0;
-      // 将 Sequelize 实例转换为普通对象，确保所有字段都包含在响应中
-      const formattedRows = rows.map(row => ({
-        id: row.id,
-        path: row.path,
-        method: row.method,
-        ip: row.ip,
-        requestTime: row.requestTime,
-        durationMs: row.durationMs,
-        platform: row.platform,
-        platformName: row.platformName || '',
-      }));
-      ctx.body = { code: 0, msg: '', rows: formattedRows, total: count, avgDurationMs };
+      ctx.body = { code: 0, msg: '', rows, total: count, avgDurationMs };
     } catch (e) {
       ctx.logger.error('Logs stats error:', e);
       if (e.name === 'SequelizeConnectionRefusedError') {
