@@ -258,7 +258,7 @@ class AnalyticsService extends Service {
       // DAU统计
       const dauStats = await sequelize.query(`
         SELECT 
-          DATE(created_at) as date,
+          TO_CHAR(DATE(created_at), 'YYYY-MM-DD') as date,
           COUNT(DISTINCT user_id) as dau
         FROM analytics_events
         WHERE DATE(created_at) >= :startDate 
@@ -274,7 +274,7 @@ class AnalyticsService extends Service {
       // MAU统计
       const mauStats = await sequelize.query(`
         SELECT 
-          DATE_TRUNC('month', created_at) as month,
+          TO_CHAR(DATE_TRUNC('month', created_at), 'YYYY-MM') as month,
           COUNT(DISTINCT user_id) as mau
         FROM analytics_events
         WHERE DATE(created_at) >= :startDate 
@@ -556,7 +556,16 @@ class AnalyticsService extends Service {
       'month': "DATE_TRUNC('month', created_at)"
     };
 
+    // 时间桶格式化模板：与 intervalMap 一一对应，直接返回可读的日期/月份字符串，避免返回时间戳
+    const intervalFormat = {
+      'hour': 'YYYY-MM-DD HH24:00',
+      'day': 'YYYY-MM-DD',
+      'week': 'IYYY-"W"IW',
+      'month': 'YYYY-MM'
+    };
+
     const timeTrunc = intervalMap[interval] || intervalMap['day'];
+    const timeFormat = intervalFormat[interval] || intervalFormat['day'];
 
     try {
       let query = '';
@@ -568,7 +577,7 @@ class AnalyticsService extends Service {
           // 事件总数趋势
           query = `
             SELECT 
-              ${timeTrunc} as time_bucket,
+              TO_CHAR(${timeTrunc}, '${timeFormat}') as time_bucket,
               COUNT(*) as count,
               COUNT(DISTINCT user_id) as unique_users
             FROM analytics_events
@@ -583,7 +592,7 @@ class AnalyticsService extends Service {
           // 日活跃用户数趋势
           query = `
             SELECT 
-              ${timeTrunc} as time_bucket,
+              TO_CHAR(${timeTrunc}, '${timeFormat}') as time_bucket,
               COUNT(DISTINCT user_id) as dau,
               COUNT(*) as total_events
             FROM analytics_events
@@ -599,7 +608,7 @@ class AnalyticsService extends Service {
           // 页面访问量趋势
           query = `
             SELECT 
-              ${timeTrunc} as time_bucket,
+              TO_CHAR(${timeTrunc}, '${timeFormat}') as time_bucket,
               COUNT(*) as page_views,
               COUNT(DISTINCT user_id) as unique_visitors,
               COUNT(DISTINCT properties::jsonb->>'page_name') as unique_pages
@@ -617,7 +626,7 @@ class AnalyticsService extends Service {
           // 唯一用户数趋势
           query = `
             SELECT 
-              ${timeTrunc} as time_bucket,
+              TO_CHAR(${timeTrunc}, '${timeFormat}') as time_bucket,
               COUNT(DISTINCT user_id) as unique_users,
               COUNT(*) as total_events
             FROM analytics_events
@@ -643,7 +652,7 @@ class AnalyticsService extends Service {
             ),
             daily_retention AS (
               SELECT 
-                fv.first_visit_date as time_bucket,
+                TO_CHAR(fv.first_visit_date, 'YYYY-MM-DD') as time_bucket,
                 COUNT(DISTINCT fv.user_id) as new_users,
                 COUNT(DISTINCT CASE 
                   WHEN DATE(ae.created_at) = fv.first_visit_date + INTERVAL '1 day' THEN fv.user_id 
@@ -673,7 +682,7 @@ class AnalyticsService extends Service {
           // 性能指标趋势（基于duration字段）
           query = `
             SELECT 
-              ${timeTrunc} as time_bucket,
+              TO_CHAR(${timeTrunc}, '${timeFormat}') as time_bucket,
               COUNT(*) as total_events,
               COUNT(CASE WHEN duration IS NOT NULL THEN 1 END) as events_with_duration,
               AVG(CASE WHEN duration IS NOT NULL THEN duration END) as avg_duration,
@@ -691,7 +700,7 @@ class AnalyticsService extends Service {
           // 默认返回events趋势
           query = `
             SELECT 
-              ${timeTrunc} as time_bucket,
+              TO_CHAR(${timeTrunc}, '${timeFormat}') as time_bucket,
               COUNT(*) as count,
               COUNT(DISTINCT user_id) as unique_users
             FROM analytics_events

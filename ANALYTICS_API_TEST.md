@@ -39,7 +39,7 @@
 
 **测试命令：**
 ```bash
-curl -s 'http://localhost:7001/api/analytics/event-stats?startDate=2025-12-30&endDate=2025-12-30'
+curl -s 'http://120.48.95.51:7001/api/analytics/event-stats?startDate=2025-12-30&endDate=2026-12-30'
 ```
 
 **预期结果：**
@@ -94,7 +94,7 @@ curl -s 'http://localhost:7001/api/analytics/event-stats?startDate=2025-12-30&en
 
 **测试命令：**
 ```bash
-curl -s 'http://localhost:7001/api/analytics/page-views?startDate=2025-12-30&endDate=2025-12-30'
+curl -s 'http://120.48.95.51:7001/api/analytics/page-views?startDate=2025-12-30&endDate=2026-12-30'
 ```
 
 **预期结果：**
@@ -141,7 +141,7 @@ curl -s 'http://localhost:7001/api/analytics/page-views?startDate=2025-12-30&end
 
 **测试命令：**
 ```bash
-curl -s 'http://localhost:7001/api/analytics/trends?startDate=2025-12-30&endDate=2025-12-30&interval=day'
+curl -s 'http://120.48.95.51:7001/api/analytics/trends?startDate=2025-12-30&endDate=2026-12-30&interval=day'
 ```
 
 **预期结果：**
@@ -182,7 +182,7 @@ curl -s 'http://localhost:7001/api/analytics/trends?startDate=2025-12-30&endDate
 
 **测试命令：**
 ```bash
-curl -s 'http://localhost:7001/api/analytics/activity?startDate=2025-12-30&endDate=2025-12-30'
+curl -s 'http://120.48.95.51:7001/api/analytics/activity?startDate=2025-12-30&endDate=2026-12-30'
 ```
 
 **预期结果：**
@@ -233,7 +233,7 @@ curl -s 'http://localhost:7001/api/analytics/activity?startDate=2025-12-30&endDa
 
 **测试命令：**
 ```bash
-curl -s 'http://localhost:7001/api/analytics/events?startDate=2025-12-30&endDate=2025-12-30'
+curl -s 'http://120.48.95.51:7001/api/analytics/events?startDate=2025-12-30&endDate=2026-12-30'
 ```
 
 **预期结果：**
@@ -272,7 +272,7 @@ curl -s 'http://localhost:7001/api/analytics/events?startDate=2025-12-30&endDate
 
 **测试命令：**
 ```bash
-curl -s 'http://localhost:7001/api/analytics/retention?days=7'
+curl -s 'http://120.48.95.51:7001/api/analytics/retention?days=7'
 ```
 
 **预期结果：**
